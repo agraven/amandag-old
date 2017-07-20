@@ -1,0 +1,8 @@
+[package]
+name = "amandag"
+version = "0.1.0"
+authors = ["Amanda P. Graven <amanda@amandag.net>"]
+
+[dependencies]
+mysql = "*"
+time = "*"
