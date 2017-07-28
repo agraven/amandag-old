@@ -5,9 +5,21 @@ use std::os::unix::ffi::OsStringExt;
 
 /// Builds a map of key-value pairs from GET request
 pub fn get_get() -> Option<HashMap<String, String>> {
-	if let Some(get) = env::var_os("QUERY_STRING") {
-		let len = get.len();
-		Some(split_request_data(get.into_vec(), len))
+	if let Some(get_str) = env::var_os("QUERY_STRING") {
+		let len = get_str.len();
+		Some(split_request_data(get_str.into_vec(), len))
+	} else {
+		None
+	}
+}
+
+pub fn get_get_member(name: String) -> Option<String> {
+	if let Some(get_map) = get_get() {
+		if let Some(value) = get_map.get(name.as_str()) {
+			Some(value.clone())
+		} else {
+			None
+		}
 	} else {
 		None
 	}

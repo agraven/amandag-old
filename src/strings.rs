@@ -13,6 +13,7 @@ Content-Language: en
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="style.css">
+	<script src='https://www.google.com/recaptcha/api.js'/>
 </head>
 <body>
 	<div id="headbar">
@@ -30,4 +31,22 @@ Content-Language: en
 			<div class="title">Amanda's terrible homepage</div>
 		</div>"##, title)
 }
+pub const SUBMIT_CONTENT: &'static str = r##"\
+		<article>
+			<h1>Submit post</h1>
+			<form action="submit.cgi" method="post">
+				Title:<br>
+				<input type="text" name="title">
+				<p>Content:<br>
+				<textarea rows="1" cols="1" name="content"></textarea>
+				<p>User:<br>
+				<input type="text" name="user">
+				<br>Password:<br>
+				<input type="password" name="password">
+
+				<p>
+				<input type="submit" value="Submit"/>
+				<div class="g-recaptcha" data-sitekey="6LdO2SoUAAAAAPOph0HIJ7mUUEnDsG_mfS0AHL1L"></div>
+			</form>
+		</article>"##;
 pub const DOCUMENT_FOOTER: &'static str = "\t</main>\n</body>\n</html>";
