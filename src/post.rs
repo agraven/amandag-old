@@ -10,6 +10,7 @@ pub struct Post {
 	pub post_time: Timespec,
 	pub edit_time: Timespec,
 	pub category: String,
+	pub comment_count: i64,
 }
 
 impl Post {
@@ -21,11 +22,19 @@ impl Post {
 			format!("Submitted {}", time::at(self.post_time).ctime())
 		};
 		// Print article
-		format!("\t\t<article>
-			<h1>{}</h1>
-			<header>{}</header>
-			<header class=\"right\">Filed under {}</header>
-			<p>{}\n\t\t</article>",
-		self.title, time_string, self.category, self.content)
+		format!(r##"		<article>
+			<h1><a href="/article/{id}">{title}</a></h1>
+			<header>{time}</header>
+			<header class="right">Filed under {category}</header>
+			<p>{content}
+
+			<footer>{count} comments</footer>
+		</article>"##,
+			id = self.id,
+			title = self.title,
+			time = time_string,
+			category = self.category,
+			content = self.content,
+			count = self.comment_count)
 	}
 }

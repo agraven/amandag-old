@@ -58,6 +58,13 @@ fn split_request_data(data: Vec<u8>, length: usize) -> HashMap<String, String> {
 			value.push(data[i] as char);
 			i += 1;
 		}
+		i += 1;
+		value.replace('+', " ");
+		value.replace("%20", " ");
+		value.replace("%21", "!");
+		value.replace("%2C", ",");
+		value.replace("%2E", ".");
+
 		map.insert(name, value);
 	}
 	return map;
