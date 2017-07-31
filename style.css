@@ -19,10 +19,10 @@ ul.navbar li {
 }
 ul.navbar li a {
 	text-decoration: none;
-	color: #4455FF;
+	color: #99AAFF;
 }
 ul.navbar li a:hover {
-	color: #5465FF;
+	color: #AABBFF;
 	background-color: #324354
 }
 
@@ -99,3 +99,8 @@ header.right {
 }
 
 h1 { margin: 0; }
+h1 a { color: #FFF; }
+h1 a:hover {
+	color: #FFF;
+	text-decoration: underline;
+}

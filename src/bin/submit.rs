@@ -99,7 +99,7 @@ fn main() {
 				(title, content, category)).unwrap();
 
 			println!("{}", strings::format_document_header("Article submitted"));
-			println!("<article>Article submitted. Here's a preview of its contents:
+			println!("<article>Article submitted, you can view it. Here's a preview of its contents:
 			<h1>{}</h1><p>{}</article>", title, content);
 			println!("{}", strings::DOCUMENT_FOOTER);
 		} else {

@@ -25,8 +25,7 @@ fn main() {
 				// Get amount of comments on post
 				let comment_count = if let Some(row) =
 				pool.first_exec(format!("SELECT COUNT(*) AS comment_count FROM comments WHERE post_id = {}", id), ()).unwrap() {
-					let comment_count = mysql::from_row_opt(row).unwrap_or(0);
-                    comment_count
+					mysql::from_row_opt(row).unwrap_or(0)
 				} else { 0 };
 				Post {
 					id: id,
