@@ -83,9 +83,20 @@ article {
 	width: 100%;
 	color: white;
 	background: #345;
-	padding: 8px;
+	padding: 12px;
 	box-sizing: border-box;
 	margin-top: 12px;
+}
+div.comment {
+	width: 100%;
+	color: white;
+	background: #345;
+	padding: 12px;
+	box-sizing: border-box;
+	margin-top: 12px;
+}
+div.comment > div.comment {
+	margin-left: 10px;
 }
 header {
 	font-size: 70%;
@@ -99,7 +110,10 @@ header.right {
 }
 
 h1 { margin: 0; }
-h1 a { color: #FFF; }
+h1 a {
+	color: #FFF;
+	text-decoration: none;
+}
 h1 a:hover {
 	color: #FFF;
 	text-decoration: underline;

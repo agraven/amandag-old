@@ -74,7 +74,7 @@ Content-Language: en
 fn main() {
 	// If article was submitted, don't print submisstion form
 	if env::var_os("REQUEST_METHOD") == Some(OsString::from("POST")) {
-		// Get a map ifPOST values
+		// Get a map of POST values
 		let post_map = cgi::get_post().unwrap_or(HashMap::new());
 		// Make sure we have all necessary POST values
 		let mut has_keys = true;
