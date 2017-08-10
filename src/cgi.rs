@@ -12,9 +12,9 @@ pub fn get_get() -> Option<HashMap<String, String>> {
 	}
 }
 
-pub fn get_get_member(name: String) -> Option<String> {
+pub fn get_get_member(name: &str) -> Option<String> {
 	if let Some(get_map) = get_get() {
-		if let Some(value) = get_map.get(name.as_str()) {
+		if let Some(value) = get_map.get(name) {
 			Some(value.clone())
 		} else {
 			None

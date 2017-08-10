@@ -11,31 +11,23 @@ fn main() {
 	// Select posts from SQL DATABASE
 	let selected_posts: Vec<Post> =
 		pool.prep_exec("SELECT id, title, content, post_time, edit_time, category FROM posts ORDER BY post_time DESC LIMIT 20", ())
-		.map(|result| {
+	.map(|result| {
 			// Iterate through rows
 			result.map(|x| x.unwrap()).map(|row| {
 				let (id, title, content, post_time, edit_time, category) = mysql::from_row_opt(row)
-					.unwrap_or( (
+					.unwrap_or((
                         0,
 						String::from("Error!"),
 						String::from("Failed to display article: Error while fetching from database"),
 						time::get_time(), time::get_time(),
-						String::from("Error"))
-					);
+						String::from("Error")
+					));
 				// Get amount of comments on post
 				let comment_count = if let Some(row) =
-				pool.first_exec(format!("SELECT COUNT(*) AS comment_count FROM comments WHERE post_id = {}", id), ()).unwrap() {
+				pool.first_exec("SELECT COUNT(*) AS comment_count FROM comments WHERE post_id = ?", (id,)).unwrap() {
 					mysql::from_row_opt(row).unwrap_or(0)
 				} else { 0 };
-				Post {
-					id: id,
-					title: title,
-					content: content,
-					post_time: post_time,
-					edit_time: edit_time,
-					category: category,
-					comment_count: comment_count,
-				}
+				Post {id, title, content, post_time, edit_time, category, comment_count}
 			}).collect()
 		}).unwrap();
 

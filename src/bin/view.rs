@@ -1,19 +1,16 @@
-extern crate mysql;
 extern crate amandag;
+extern crate mysql;
 extern crate time;
 
+use amandag::cgi;
+use amandag::Comment;
+use amandag::CommentList;
 use amandag::Post;
 use amandag::strings;
-use amandag::cgi;
 
 fn main() {
 	// Get map of GET request and get id
-	let mut id: i64 = -1;
-	if let Some(get_map) = cgi::get_get() {
-		if let Some(id_string) = get_map.get("id") {
-			id = id_string.parse().unwrap_or(-1);
-		} 
-	}
+	let id: i64 = cgi::get_get_member("id").unwrap_or(String::new()).parse().unwrap_or(-1);
 
 	// Establish connection to MySQL server
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")
@@ -31,7 +28,11 @@ fn main() {
 					time::get_time(), time::get_time(),
 					String::from("Error")
 				));
-			Post { id, title, content, post_time, edit_time, category, comment_count: 0, }
+			let comment_count = if let Some(row) =
+			pool.first_exec("SELECT COUNT(*) AS comment_count FROM comments WHERE post_id = ?", (id,)).unwrap() {
+				mysql::from_row_opt(row).unwrap_or(0)
+			} else { 0 };
+			Post { id, title, content, post_time, edit_time, category, comment_count, }
 		} else {
 			Post {
 				id: 0,
@@ -46,8 +47,17 @@ fn main() {
 			}
 		};
 
+    let comments: Vec<Comment> =
+		pool.prep_exec("SELECT id, author, content, post_time, parent_id FROM comments WHERE post_id = ?", (id,))
+        .map(|result| { result.map(|x| x.unwrap()).map(|row| {
+			let (id, author, content, post_time, parent_id) = mysql::from_row(row);
+			Comment {id, author, content, post_time, parent_id}
+        }).collect()
+    }).unwrap();
+
 	// print document
 	println!("{}", strings::format_document_header(&post.title));
 	println!("{}", post.display());
+	println!("{}", comments.display());
 	println!("{}", strings::DOCUMENT_FOOTER);
 }
