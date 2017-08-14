@@ -1,8 +1,10 @@
 [package]
 name = "amandag"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Amanda P. Graven <amanda@amandag.net>"]
 
 [dependencies]
 mysql = "12.0.1"
+hoedown = "6.0.0"
 time = "*"
+url = "1.5.1"

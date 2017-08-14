@@ -2,10 +2,10 @@ body {
 	background: #567;
 }
 
+/* Head/navbar styling */
 .title {
 	font-family: sans;
 }
-
 ul.navbar {
 	list-style-type: none;
 	margin: 0;
@@ -25,7 +25,6 @@ ul.navbar li a:hover {
 	color: #AABBFF;
 	background-color: #324354
 }
-
 #headbar {
 	font-family: sans;
 	color: white;
@@ -43,7 +42,6 @@ ul.navbar li a:hover {
 	padding: 0;
 	width: 100%;
 }
-
 #headbar-content {
 	overflow: auto;
 	padding: 0.5em;
@@ -62,6 +60,7 @@ ul.navbar li a:hover {
 	background-position: center center;
 }
 
+/* Content styling */
 main {
 	padding: 1em;
 	margin: auto;
@@ -79,6 +78,7 @@ main {
 	padding: 0.2em;
 }
 
+/* Article styling */
 article {
 	width: 100%;
 	color: white;
@@ -87,16 +87,17 @@ article {
 	box-sizing: border-box;
 	margin-top: 12px;
 }
-div.comment {
-	width: 100%;
-	color: white;
-	background: #345;
-	padding: 12px;
-	box-sizing: border-box;
-	margin-top: 12px;
+h1 { margin: 0; }
+a {
+	color: #FFF;
+	text-decoration: none;
 }
-div.comment > div.comment {
-	margin-left: 10px;
+a:hover {
+	color: #FFF;
+	text-decoration: underline;
+}
+a:visited {
+	color: #CCC;
 }
 header {
 	font-size: 70%;
@@ -108,13 +109,67 @@ header {
 header.right {
 	float: right;
 }
+footer {
+	font-size: 80%;
+	font-style: italic;
+	font-family: sans;
+}
+textarea {
+	height: 10ex;
+	width: 100%;
+	max-width: 40em;
+}
 
-h1 { margin: 0; }
-h1 a {
-	color: #FFF;
+/* Comment styling */
+div.comment {
+	width: 100%;
+	color: white;
+	background: #345;
+	padding: 12px;
+	box-sizing: border-box;
+	margin-top: 12px;
+}
+div.comment div.comment {
+	margin-left: 10px;
+	margin-right: 10px;
+}
+div.comment h3 {
+	margin: 0;
+	margin-bottom: 0.1em;
+}
+div.comment div.time {
+	color: #BBB;
+	font-size: 80%;
+}
+div.time + p {
+	margin-top: 0.5em;
+}
+div.color-ice div.time {
+	color: #333!important;
+}
+div.color-yellow div.time {
+	color: #333!important;
+}
+div.color-red    { background: #A71B1B; }
+div.color-green  { background: #1B6546; }
+div.color-blue   { background: #5454CE; }
+div.color-ice    { background: #9C9CE2; color: #000!important; }
+div.color-yellow { background: #DCDC1A; color: #000!important; }
+div.color-brown  { background: #845534; }
+div.color-purple { background: #682D68; }
+ul.comment-buttons {
+	list-style-type: none;
+	display: block;
+	padding-left: 0;
+}
+ul.comment-buttons li {
+	display: inline-block;
+	white-space: nowrap;
+}
+ul.comment-buttons li a {
+	color: #AAA;
 	text-decoration: none;
 }
-h1 a:hover {
-	color: #FFF;
+ul.comment-buttons li a:hover {
 	text-decoration: underline;
 }

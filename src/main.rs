@@ -3,7 +3,12 @@ extern crate time;
 
 use post::Post;
 
+#[allow(dead_code)]
+mod cgi;
+#[allow(dead_code)]
+mod comment;
 mod post;
+#[allow(dead_code)]
 mod strings;
 
 fn main() {
@@ -23,10 +28,10 @@ fn main() {
 						String::from("Error")
 					));
 				// Get amount of comments on post
-				let comment_count = if let Some(row) =
-				pool.first_exec("SELECT COUNT(*) AS comment_count FROM comments WHERE post_id = ?", (id,)).unwrap() {
-					mysql::from_row_opt(row).unwrap_or(0)
-				} else { 0 };
+				let comment_count = mysql::from_row_opt(
+					pool.first_exec("SELECT COUNT(*) AS comment_count FROM comments \
+					WHERE post_id = ?", (id,)).unwrap().unwrap()
+				).unwrap_or(0);
 				Post {id, title, content, post_time, edit_time, category, comment_count}
 			}).collect()
 		}).unwrap();

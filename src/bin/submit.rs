@@ -2,11 +2,6 @@ extern crate amandag;
 extern crate mysql;
 extern crate time;
 
-use std::collections::HashMap;
-use std::env;
-use std::ffi::OsString;
-
-//use amandag::Post;
 use amandag::strings;
 use amandag::cgi;
 
@@ -73,9 +68,9 @@ Content-Language: en
 
 fn main() {
 	// If article was submitted, don't print submisstion form
-	if env::var_os("REQUEST_METHOD") == Some(OsString::from("POST")) {
+	if cgi::request_method_is("POST") {
 		// Get a map of POST values
-		let post_map = cgi::get_post().unwrap_or(HashMap::new());
+		let post_map = cgi::get_post().expect("Failed to get post values");
 		// Make sure we have all necessary POST values
 		let mut has_keys = true;
 		for key in &["title", "content", "category", "user", "password"] {
@@ -99,7 +94,7 @@ fn main() {
 				(title, content, category)).unwrap();
 
 			println!("{}", strings::format_document_header("Article submitted"));
-			println!("<article>Article submitted, you can view it. Here's a preview of its contents:
+			println!("<article>Article submitted. Here's a preview of its contents:
 			<h1>{}</h1><p>{}</article>", title, content);
 			println!("{}", strings::DOCUMENT_FOOTER);
 		} else {

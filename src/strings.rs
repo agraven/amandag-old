@@ -1,12 +1,12 @@
 pub fn format_document_header(title: &str) -> String {
 	format!(r##"Content-type: text/html; charset=utf-8
-X-Powered-By: Rust/1.16.0
+X-Powered-By: Rust/1.19.0
 Content-Language: en
 
 <!DOCTYPE html>
 <html>
 <head>
-	<title>{}</title>
+	<title>{title}</title>
 	<meta name="author" content="Amanda Graven">
 	<meta name="description" content="Personal homepage of Amanda Graven">
 
@@ -28,7 +28,9 @@ Content-Language: en
 	<main>
 		<div id="body-title">
 			<div class="title">Amanda's terrible homepage</div>
-		</div>"##, title)
+		</div>"##,
+		title = title,
+	)
 }
 
 pub const DOCUMENT_FOOTER: &'static str = "\t</main>\n</body>\n</html>";
