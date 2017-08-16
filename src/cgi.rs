@@ -31,7 +31,7 @@ impl Encode for String {
 		html.render(&markdown).to_str().unwrap().to_string()
 	}
 	fn render_html(&self) -> String {
-		self.encode_html().render_markdown()
+		self.render_markdown()
 	}
 }
 

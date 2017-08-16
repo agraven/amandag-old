@@ -1,112 +1,161 @@
 extern crate amandag;
+extern crate futures;
+extern crate hyper;
 extern crate mysql;
+extern crate serde;
+extern crate serde_json;
 extern crate time;
+extern crate tokio_core;
+
+#[macro_use]
+extern crate serde_derive;
+
+use std::fs::File;
+use std::io::{self, Read, Write};
+
+use self::futures::{Future, Stream};
+use self::hyper::{Client, Method, Request};
+use self::tokio_core::reactor::Core;
 
 use amandag::strings;
 use amandag::cgi;
 
-pub const SUBMIT_CONTENT: &'static str = r##"
-		<article>
-			<h1>Submit post</h1>
-			<form action="submit.cgi" method="post">
-				Title:<br>
-				<input type="text" name="title">
-				<br>Category:<br>
-				<input type="text" name="category">
-				<p>Content:<br>
-				<textarea rows="1" cols="1" name="content"></textarea>
-
-				<p>User:<br>
-				<input type="text" name="user">
-				<br>Password:<br>
-				<input type="password" name="password">
-
-				<p>
-				<input type="submit" value="Submit"/>
-				<div class="g-recaptcha" data-sitekey="6LdO2SoUAAAAAPOph0HIJ7mUUEnDsG_mfS0AHL1L"></div>
-			</form>
-		</article>"##;
-
-pub const SUBMIT_ERROR: &'static str = r##"\t\t<article>
-			<h1>Server error</h1>
-			<p>Article submission failed: missing post values.
-		</article>"##;
-
-pub fn format_document_header_with_captcha(title: &str) -> String {
-	format!(r##"Content-type: text/html; charset=utf-8
-X-Powered-By: Rust/1.16.0
-Content-Language: en
-
-<!DOCTYPE html>
-<html>
-<head>
-	<title>{}</title>
-	<meta name="author" content="Amanda Graven">
-	<meta name="description" content="Personal homepage of Amanda Graven">
-
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" type="text/css" href="/style.css">
-	<script src="https://www.google.com/recaptcha/api.js"></script>
-</head>
-<body>
-	<div id="headbar">
-		<div id="headbar-content">
-			<div class="title" style="float: left;">Amanda's terrible homepage</div>
-			<ul class="navbar">
-				<li><a href="/">Home</a></li>
-				<li><a href="/about">About</a></li>
-			</ul>
-		</div>
-	</div>
-	<div id="easter-egg"> </div>
-	<main>
-		<div id="body-title">
-			<div class="title">Amanda's terrible homepage</div>
-		</div>"##, title)
+// Representation of reCAPTCHA response
+#[derive(Serialize, Deserialize)]
+struct CaptchaResponse {
+	success: bool,
+	challenge_ts: i64,
+	hostname: String
 }
 
+// Error definitions
+enum Error {
+	CaptchaError,
+	HyperError(hyper::Error),
+	IoError(io::Error),
+	JsonError(serde_json::Error),
+	MissingError(&'static str),
+	SqlError(mysql::error::Error),
+	UriError(hyper::error::UriError),
+	Utf8Error(std::string::FromUtf8Error),
+}
+use Error::*;
+
+// Macro for quick implementation of From<T> for Error
+macro_rules! impl_error {
+	( $( ($l:ident, $f:ty) ),* ) => {
+		$(
+			impl From<$f> for Error {
+				fn from(err: $f) -> Error {
+					Error::$l(err)
+				}
+			}
+		)*
+	}
+}
+impl_error!(
+	(HyperError, hyper::Error),
+	(IoError, io::Error),
+	(JsonError, serde_json::Error),
+	(MissingError, &'static str),
+	(SqlError, mysql::Error),
+	(UriError, hyper::error::UriError),
+	(Utf8Error, std::string::FromUtf8Error)
+);
+
 fn main() {
+	match run() {
+		Ok(()) => (),
+		Err(e) => {
+			println!("{}{}{}{}",
+				strings::format_document_header("Error"),
+				"<article><h1>Internal server error</h1>The page could \
+				not be displayed because of an internal error: ",
+				match e {
+					CaptchaError => String::from("reCAPTCHA failed"),
+					HyperError(e) => format!("HTTP error: {}", e),
+					IoError(e) => format!("I/O error: {}", e),
+					JsonError(e) => format!("JSON parsing error: {}", e),
+					MissingError(s) => format!("Missing parameter '{}'", s),
+					SqlError(e) => format!("Database error: {}", e),
+					UriError(e) => format!("URI parsing error: {}", e),
+					Utf8Error(err) => format!(
+							"Illegal UTF-8 at {}",
+							err.utf8_error().valid_up_to()
+						),
+				},
+				format!("</article>\n{}", strings::DOCUMENT_FOOTER)
+			);
+		},
+	};
+}
+
+fn run() -> Result<(), Error> {
 	// If article was submitted, don't print submisstion form
 	if cgi::request_method_is("POST") {
 		// Get a map of POST values
-		let post_map = cgi::get_post().expect("Failed to get post values");
-		// Make sure we have all necessary POST values
-		let mut has_keys = true;
-		for key in &["title", "content", "category", "user", "password"] {
-			if !post_map.contains_key(&key.to_string()) { has_keys = false; }
-		}
-		if !has_keys {
-			println!("{}", strings::format_document_header("Error"));
-			println!("{}", SUBMIT_ERROR);
-			println!("{}", strings::DOCUMENT_FOOTER);
-			return;
-		}
+		let map = cgi::get_post().expect("Failed to get post values");
+
+		write!(File::create("debug.log")?, "{:?}", map)?;
+
 		// Get values from POST
-		let user = post_map.get("user").unwrap();
-		let password = post_map.get("password").unwrap();
-		let title = post_map.get("title").unwrap();
-		let content = post_map.get("content").unwrap();
-		let category = post_map.get("category").unwrap();
+		let get = |key: &'static str| -> Result<&String, Error> {
+			map.get(key).ok_or(MissingError(key))
+		};
+		let user = get("user")?;
+		let password = get("password")?;
+		let title = get("title")?;
+		let content = get("content")?;
+		let category = get("category")?;
+		let response = get("g-recaptcha-response")?;
+
+		// Verify captcha
+		// Start by fetching response from verification server
+		let mut core = Core::new()?;
+		let client = Client::new(&core.handle());
+		let uri = "https://www.google.com/recaptcha/api/siteverify".parse()?;
+		let mut request = Request::new(Method::Post, uri);
+		request.set_body(format!(
+			"secret={secret}&response={response}",
+			secret = String::from_utf8(
+				File::open("secret/submit-captcha")?
+					.bytes()
+					.map(|b| b.unwrap())
+					.collect()
+			)?,
+			response = response
+		));
+		let work = client.request(request).and_then(|res| {
+			res.body().collect()
+		});
+		let chunks = core.run(work)?;
+		let body = chunks.iter().fold(
+				String::new(),
+				|acc, ref c| acc + &String::from_utf8(c.to_vec()).unwrap()
+			);
+		// Deserialize response
+		let response: CaptchaResponse = serde_json::from_str(&body)?;
+		if !response.success { return Err(CaptchaError) };
+
 		// Insert article into database
-		if let Ok(pool) = mysql::Pool::new(format!("mysql://{}:{}@localhost:3306/amandag", user, password)) {
-			pool.prep_exec("INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
-				(title, content, category)).unwrap();
+		let url = format!("mysql://{}:{}@localhost:3306/amandag", user, password);
+		mysql::Pool::new(url)?
+			.prep_exec(
+				"INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
+				(title, content, category)
+			)?;
 
-			println!("{}", strings::format_document_header("Article submitted"));
-			println!("<article>Article submitted. Here's a preview of its contents:
+		println!("{}", strings::format_document_header("Article submitted"));
+		println!("<article>Article submitted. Here's a preview of its contents:
 			<h1>{}</h1><p>{}</article>", title, content);
-			println!("{}", strings::DOCUMENT_FOOTER);
-		} else {
-			println!("{}", strings::format_document_header("Error"));
-			println!("\t\t<article>Failed to submit article: error connecting to database</article>");
-			println!("{}", strings::DOCUMENT_FOOTER);
-		}
+		println!("{}", strings::DOCUMENT_FOOTER);
 
-		return;
+		return Ok(());
 	}
 	// Print submission form
-	println!("{}", format_document_header_with_captcha("Submit post"));
-	println!("{}", SUBMIT_CONTENT);
+	println!("{}", strings::format_captcha_header("Submit post"));
+	println!("{}", strings::SUBMIT_CONTENT);
 	println!("{}", strings::DOCUMENT_FOOTER);
+
+	Ok(())
 }

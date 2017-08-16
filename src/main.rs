@@ -5,8 +5,6 @@ use post::Post;
 
 #[allow(dead_code)]
 mod cgi;
-#[allow(dead_code)]
-mod comment;
 mod post;
 #[allow(dead_code)]
 mod strings;
@@ -15,7 +13,11 @@ fn main() {
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag").unwrap();
 	// Select posts from SQL DATABASE
 	let selected_posts: Vec<Post> =
-		pool.prep_exec("SELECT id, title, content, post_time, edit_time, category FROM posts ORDER BY post_time DESC LIMIT 20", ())
+		pool.prep_exec(
+			"SELECT id, title, content, post_time, edit_time, category \
+			FROM posts ORDER BY post_time DESC LIMIT 20",
+			()
+		)
 	.map(|result| {
 			// Iterate through rows
 			result.map(|x| x.unwrap()).map(|row| {

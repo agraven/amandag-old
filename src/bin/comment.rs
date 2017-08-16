@@ -7,29 +7,71 @@ use amandag::Comment;
 
 use std::fs::File;
 use std::io::Read;
-use std::io::Write;
+
+macro_rules! impl_error {
+	[ $( ($l:ident, $f:ty) ),* ] => {
+		$(
+			impl From<$f> for Error {
+				fn from(err: $f) -> Error {
+					Error::$l(err)
+				}
+			}
+		)*
+	}
+}
+
+enum Error {
+	IoError(std::io::Error),
+	MethodError,
+	MissingError(&'static str),
+	ParseIntError(std::num::ParseIntError),
+	SqlError(mysql::Error),
+	Utf8Error(std::string::FromUtf8Error),
+}
+use Error::*;
+
+impl_error![
+	(IoError, std::io::Error),
+	(ParseIntError, std::num::ParseIntError),
+	(SqlError, mysql::Error),
+	(Utf8Error, std::string::FromUtf8Error)
+];
 
 fn main() {
+	match run() {
+		Ok(()) => (),
+		Err(e) => match e {
+			IoError(_) => panic!("I/O Error"),
+			MethodError => panic!("Wrong request method"),
+			MissingError(p) => panic!("Missing parameter {}", p),
+			ParseIntError(_) => panic!("Int parsing error"),
+			SqlError(_) => panic!("Database error"),
+			Utf8Error(_) => panic!("UTF-8 parsing error"),
+		}
+	}
+}
+
+fn run() -> Result<(), Error> {
 	// TODO: end-user friendly error messages
 	if !cgi::request_method_is("POST") {
-		panic!("Wrong request method");
+		return Err(MethodError);
 	}
 	let post_map = cgi::get_post().unwrap();
-	let mut file = File::create("debug.log").unwrap();
-	write!(&mut file, "{:?}", post_map).unwrap();
-
 	// Get values
-	let author = post_map.get("name").expect("Missing name").to_string();
-	let content = post_map.get("content").expect("Missing content").to_string();
-	let post_id = post_map.get("post").expect("Missing post id").parse::<u64>().unwrap();
-	let parent_id = post_map.get("parent").expect("Missing parent id").parse::<i64>().unwrap();
+	let get = |key: &'static str| -> Result<&String, Error> {
+		post_map.get(key).ok_or(MissingError(key))
+	};
+	let author = get("name")?.clone();
+	let content = get("content")?.clone();
+	let post_id = get("post")?.parse::<i64>()?;
+	let parent_id = get("parent")?.parse::<i64>()?;
 
 	let mut pw_buf = Vec::new();
-	File::open("secret/password").unwrap().read_to_end(&mut pw_buf).unwrap();
-	let password = String::from_utf8(pw_buf).unwrap();
+	File::open("secret/password")?.read_to_end(&mut pw_buf)?;
+	let password = String::from_utf8(pw_buf)?;
 
 	let options = format!("mysql://root:{}@localhost:3306/amandag", password);
-	let pool = mysql::Pool::new(options).unwrap();
+	let pool = mysql::Pool::new(options)?;
 	let id: u64 = mysql::from_row(pool.first_exec(r#"SELECT min(unused) AS unused
 		FROM (
 			SELECT MIN(t1.id)+1 as unused
@@ -39,16 +81,17 @@ fn main() {
 			SELECT 1
 			FROM DUAL
 			WHERE NOT EXISTS (SELECT * FROM comments WHERE id = 1)
-		) AS subquery"#, ()).unwrap().unwrap());
+		) AS subquery"#, ())?.unwrap());
 	pool.prep_exec(
 		"INSERT INTO comments (id, author, content, post_id, parent_id) \
 		VALUES (?, ?, ?, ?, ?)",
 		(id, &author, &content, post_id, parent_id)
-	).unwrap();
+	)?;
 	let post_time = time::get_time();
 	
 	println!(
 		"Content-Type: text/html; charset=utf-8\n\n{}",
 		Comment {id, author, content, post_time, parent_id}.display()
 	);
+	Ok(())
 }
