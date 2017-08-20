@@ -23,16 +23,15 @@ Content-Language: en
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="/style.css">
+	<script src='https://www.google.com/recaptcha/api.js'></script>
 	<script>
-		var g_form;
 		function show(element) {lbrace}
 			element.style.display = "block";
 		{rbrace}
 		function hide(element) {lbrace}
 			element.style.display = "none";
 		{rbrace}
-		function onSubmit(token) {lbrace}
-			var form = g_form;
+		function send(form) {lbrace}
 			function urlencodeFormData(fd) {lbrace}
 				var s = '';
 				function encode(s){lbrace}
@@ -45,9 +44,11 @@ Content-Language: en
 				{rbrace}
 				return s;
 			{rbrace}
-			data = new FormData(form);
+			var data = new FormData(form);
 			data.set("post", {post});
-			data.set("g-recaptcha-response", token);
+			for (var key of data.keys()) {lbrace}
+				console.log('Key: ' + key);
+			{rbrace}
 
 			var request = new XMLHttpRequest();
 			request.open("POST", "/comment.cgi", true);
@@ -58,10 +59,6 @@ Content-Language: en
 				{rbrace}
 			{rbrace}
 			request.send(urlencodeFormData(data));
-		{rbrace}
-		function send(form) {lbrace}
-			g_form = form;
-			grecaptcha.execute(form.getElementsByClassName("g-recaptcha")[0].id);
 		{rbrace}
 	</script>
 </head>
@@ -154,6 +151,8 @@ fn main() {
 		<input name="parent" value="-1" style="display: none;">
 		Name: <input type="text" name="name" required><br>
 		<textarea name="content" required></textarea><br>
+		<div class="g-recaptcha"
+			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
 		<button type="submit">Submit</button>
 	</form></article>"#);
 	println!("{}", comments.display());

@@ -46,11 +46,8 @@ impl Comment {
 		Name: <input type="text" name="name" required><br>
 		<textarea name="content" required></textarea><br>
 		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
-		<div
-			class="g-recaptcha"
-			data-sitekey="6LfrgS0UAAAAABLSrfJuKT13mYfK_c4jYD9MLNNn"
-			data-callback="onSubmit"
-			data-size="invisible"></div>
+		<div class="g-recaptcha"
+			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
 		<input type="submit">
 	</form>
 </div>"#,
@@ -85,12 +82,9 @@ impl CommentList for Vec<Comment> {
 		Name: <input type="text" name="name" required><br>
 		<input type="textarea" name="content" required>
 		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
-		<div
-			class="g-recaptcha"
-			data-sitekey="6LfrgS0UAAAAABLSrfJuKT13mYfK_c4jYD9MLNNn"
-			data-callback="onSubmit"
-			data-size="invisible"></div>
-		<input type="submit">
+		<input type="submit" value="Submit">
+		<div class="g-recaptcha"
+			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
 	</form>
 			{children}</div>"#,
                 author = comment.author,

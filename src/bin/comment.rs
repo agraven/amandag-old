@@ -71,7 +71,7 @@ fn run() -> Result<(), Error> {
 	let parent_id = get("parent")?.parse::<i64>()?;
 	let response = get("g-recaptcha-response")?;
 	let secret = String::from_utf8(
-		File::open("secret/submit-captcha")?
+		File::open("secret/comment-captcha")?
 			.bytes()
 			.map(|b| b.unwrap())
 			.collect()
