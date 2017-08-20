@@ -2,6 +2,7 @@ extern crate amandag;
 extern crate mysql;
 extern crate time;
 
+use amandag::captcha;
 use amandag::cgi;
 use amandag::Comment;
 
@@ -21,6 +22,7 @@ macro_rules! impl_error {
 }
 
 enum Error {
+	CaptchaError(captcha::Error),
 	IoError(std::io::Error),
 	MethodError,
 	MissingError(&'static str),
@@ -31,6 +33,7 @@ enum Error {
 use Error::*;
 
 impl_error![
+	(CaptchaError, captcha::Error),
 	(IoError, std::io::Error),
 	(ParseIntError, std::num::ParseIntError),
 	(SqlError, mysql::Error),
@@ -41,12 +44,13 @@ fn main() {
 	match run() {
 		Ok(()) => (),
 		Err(e) => match e {
-			IoError(_) => panic!("I/O Error"),
+			CaptchaError(e) => panic!("reCAPTCHA failed: {}", e),
+			IoError(e) => panic!("I/O Error: {}", e),
 			MethodError => panic!("Wrong request method"),
 			MissingError(p) => panic!("Missing parameter {}", p),
-			ParseIntError(_) => panic!("Int parsing error"),
-			SqlError(_) => panic!("Database error"),
-			Utf8Error(_) => panic!("UTF-8 parsing error"),
+			ParseIntError(e) => panic!("Int parsing error: {}", e),
+			SqlError(e) => panic!("Database error: {}", e),
+			Utf8Error(e) => panic!("UTF-8 parsing error: {}", e),
 		}
 	}
 }
@@ -65,10 +69,22 @@ fn run() -> Result<(), Error> {
 	let content = get("content")?.clone();
 	let post_id = get("post")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
+	let response = get("g-recaptcha-response")?;
+	let secret = String::from_utf8(
+		File::open("secret/submit-captcha")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect()
+	)?;
 
-	let mut pw_buf = Vec::new();
-	File::open("secret/password")?.read_to_end(&mut pw_buf)?;
-	let password = String::from_utf8(pw_buf)?;
+	captcha::verify(&secret, &response)?;
+
+	let password = String::from_utf8(
+		File::open("secret/password")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect()
+	)?;
 
 	let options = format!("mysql://root:{}@localhost:3306/amandag", password);
 	let pool = mysql::Pool::new(options)?;

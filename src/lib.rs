@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate serde_derive;
+
+pub mod captcha;
 pub mod cgi;
 pub mod comment;
 pub mod post;

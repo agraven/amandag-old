@@ -24,13 +24,15 @@ Content-Language: en
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="/style.css">
 	<script>
+		var g_form;
 		function show(element) {lbrace}
 			element.style.display = "block";
 		{rbrace}
 		function hide(element) {lbrace}
 			element.style.display = "none";
 		{rbrace}
-		function send(form) {lbrace}
+		function onSubmit(token) {lbrace}
+			var form = g_form;
 			function urlencodeFormData(fd) {lbrace}
 				var s = '';
 				function encode(s){lbrace}
@@ -43,11 +45,9 @@ Content-Language: en
 				{rbrace}
 				return s;
 			{rbrace}
-			var data = new FormData(form);
+			data = new FormData(form);
 			data.set("post", {post});
-			for (var key of data.keys()) {lbrace}
-				console.log('Key: ' + key);
-			{rbrace}
+			data.set("g-recaptcha-response", token);
 
 			var request = new XMLHttpRequest();
 			request.open("POST", "/comment.cgi", true);
@@ -58,6 +58,10 @@ Content-Language: en
 				{rbrace}
 			{rbrace}
 			request.send(urlencodeFormData(data));
+		{rbrace}
+		function send(form) {lbrace}
+			g_form = form;
+			grecaptcha.execute(form.getElementsByClassName("g-recaptcha")[0].id);
 		{rbrace}
 	</script>
 </head>
