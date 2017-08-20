@@ -150,7 +150,6 @@ fn main() {
 		<input name="parent" value="-1" style="display: none;">
 		Name: <input type="text" name="name" required><br>
 		<textarea name="content" required></textarea><br>
-		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
 		<button type="submit">Submit</button>
 	</form></article>"#);
 	println!("{}", comments.display());

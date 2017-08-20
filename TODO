@@ -1,3 +1,5 @@
 * L10N support
-* Authentication system/reCAPTCHA
+* Authentication system/reCAPTCHA for comments
 * Article editing/deletion
+* Prettier styling
+* Separate reCAPTHCA stuff into its own module

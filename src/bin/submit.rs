@@ -1,6 +1,8 @@
 extern crate amandag;
 extern crate futures;
 extern crate hyper;
+extern crate hyper_tls;
+extern crate mime;
 extern crate mysql;
 extern crate serde;
 extern crate serde_json;
@@ -15,6 +17,9 @@ use std::io::{self, Read, Write};
 
 use self::futures::{Future, Stream};
 use self::hyper::{Client, Method, Request};
+use self::hyper::header::ContentType;
+use self::hyper_tls::HttpsConnector;
+use mime::APPLICATION_WWW_FORM_URLENCODED;
 use self::tokio_core::reactor::Core;
 
 use amandag::strings;
@@ -24,8 +29,8 @@ use amandag::cgi;
 #[derive(Serialize, Deserialize)]
 struct CaptchaResponse {
 	success: bool,
-	challenge_ts: i64,
-	hostname: String
+	challenge_ts: String,
+	hostname: String,
 }
 
 // Error definitions
@@ -72,7 +77,7 @@ fn main() {
 				"<article><h1>Internal server error</h1>The page could \
 				not be displayed because of an internal error: ",
 				match e {
-					CaptchaError => String::from("reCAPTCHA failed"),
+					CaptchaError => format!("reCAPTCHA failed"),
 					HyperError(e) => format!("HTTP error: {}", e),
 					IoError(e) => format!("I/O error: {}", e),
 					JsonError(e) => format!("JSON parsing error: {}", e),
@@ -112,10 +117,14 @@ fn run() -> Result<(), Error> {
 		// Verify captcha
 		// Start by fetching response from verification server
 		let mut core = Core::new()?;
-		let client = Client::new(&core.handle());
-		let uri = "https://www.google.com/recaptcha/api/siteverify".parse()?;
-		let mut request = Request::new(Method::Post, uri);
-		request.set_body(format!(
+		let client = Client::configure()
+			.connector(HttpsConnector::new(1, &core.handle()).unwrap())
+			.build(&core.handle());
+		let mut request = Request::new(
+			Method::Post,
+			"https://www.google.com/recaptcha/api/siteverify".parse()?
+		);
+		let query = format!(
 			"secret={secret}&response={response}",
 			secret = String::from_utf8(
 				File::open("secret/submit-captcha")?
@@ -124,15 +133,16 @@ fn run() -> Result<(), Error> {
 					.collect()
 			)?,
 			response = response
-		));
+		);
+		request.headers_mut().set(ContentType(APPLICATION_WWW_FORM_URLENCODED));
+		request.set_body(query);
 		let work = client.request(request).and_then(|res| {
 			res.body().collect()
 		});
-		let chunks = core.run(work)?;
-		let body = chunks.iter().fold(
-				String::new(),
-				|acc, ref c| acc + &String::from_utf8(c.to_vec()).unwrap()
-			);
+		let body = String::from_utf8(core.run(work)?.iter().fold(
+				Vec::new(),
+				|mut acc, ref c| { acc.extend_from_slice(&c); acc }
+		))?;
 		// Deserialize response
 		let response: CaptchaResponse = serde_json::from_str(&body)?;
 		if !response.success { return Err(CaptchaError) };
