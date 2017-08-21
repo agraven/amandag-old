@@ -11,10 +11,17 @@ use std::io::Read;
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStringExt;
 
+struct Cookie {
+	name: String,
+	value: String,
+}
+
 pub trait Encode {
 	/// Replace html characters with their escape codes
 	fn encode_html(&self) -> String;
+	/// Parse markdown and return its HTML form 
 	fn render_markdown(&self) -> String;
+	/// Render markdown and ensure HTML characters are escaped
 	fn render_html(&self) -> String;
 }
 
@@ -33,6 +40,23 @@ impl Encode for String {
 	fn render_html(&self) -> String {
 		self.render_markdown()
 	}
+}
+
+/// Returns a map of set cookies by parsing the HTTP_COOKIE environment
+/// variable
+pub fn get_cookies() -> Result<HashMap<String, String>, ()> {
+	let cookies = env::var_os("HTTP_COOKIE")
+		.ok_or(())
+		.into_string()
+		.ok_or(());
+	let map = HashMap::new();
+	for pair in cookies.split("; ") {
+		sep = pair.find('=').unwrap_or(pair.len()-1);
+		let (key, value) = pair.split_at_mut(sep);
+		value.remove(0);
+		map.insert(key, value);
+	}
+	map
 }
 
 /// Builds a map of key-value pairs from GET request
