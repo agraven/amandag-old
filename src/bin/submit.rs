@@ -1,6 +1,4 @@
 extern crate amandag;
-extern crate mysql;
-extern crate time;
 
 use std::fs::File;
 use std::io::{self, Read};
@@ -9,6 +7,7 @@ use std::fmt::{self, Display, Formatter};
 use amandag::captcha;
 use amandag::cgi;
 use amandag::strings;
+use amandag::mysql;
 
 // Error definitions
 enum Error {

@@ -1,13 +1,9 @@
-extern crate mysql;
-extern crate time;
+extern crate amandag;
 
-use post::Post;
-
-#[allow(dead_code)]
-mod cgi;
-mod post;
-#[allow(dead_code)]
-mod strings;
+use amandag::mysql;
+use amandag::post::Post;
+use amandag::strings;
+use amandag::time;
 
 fn main() {
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag").unwrap();

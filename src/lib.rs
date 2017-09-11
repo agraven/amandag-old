@@ -1,5 +1,7 @@
 #[macro_use]
-extern crate serde_derive;
+pub extern crate serde_derive;
+pub extern crate mysql;
+pub extern crate time;
 
 pub mod captcha;
 pub mod cgi;

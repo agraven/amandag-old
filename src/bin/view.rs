@@ -1,12 +1,12 @@
 extern crate amandag;
-extern crate mysql;
-extern crate time;
 
 use amandag::cgi;
 use amandag::Comment;
 use amandag::CommentList;
+use amandag::mysql;
 use amandag::Post;
 use amandag::strings;
+use amandag::time;
 
 fn format_document_header(title: &str, post_id: u64) -> String {
 	format!(r##"Content-type: text/html; charset=utf-8

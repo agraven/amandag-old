@@ -3,6 +3,9 @@ name = "amandag"
 version = "0.3.0"
 authors = ["Amanda P. Graven <amanda@amandag.net>"]
 
+[profile.release]
+lto = true
+
 [dependencies]
 futures = "0.1"
 hoedown = "6.0.0"

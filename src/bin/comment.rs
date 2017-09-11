@@ -1,10 +1,10 @@
 extern crate amandag;
-extern crate mysql;
-extern crate time;
 
 use amandag::captcha;
 use amandag::cgi;
 use amandag::Comment;
+use amandag::mysql;
+use amandag::time;
 
 use std::fs::File;
 use std::io::Read;
