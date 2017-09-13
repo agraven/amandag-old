@@ -28,14 +28,7 @@ impl Post {
 			format!("Submitted {}", time::at(self.post_time).ctime())
 		};
 		// Print article
-		format!(r##"		<article>
-			<h1><a href="/article/{id}">{title}</a></h1>
-			<header>{time}</header>
-			<header class="right">Filed under {category}</header>
-			{content}
-
-			<footer><a href="/article/{id}">{count} comments</a></footer>
-		</article>"##,
+		format!(include_str!("web/post.html"),
 			id = self.id,
 			title = self.title,
 			time = time_string,

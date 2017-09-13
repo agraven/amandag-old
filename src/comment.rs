@@ -35,22 +35,7 @@ impl Comment {
 	pub fn display(&self) -> String {
 		// format
 		format!(
-			r#"<div class="comment color-{color}">
-	<h3>{author}</h3><div class="time">{time}</div>
-	{content}
-	<ul class="comment-buttons">
-		<li><a href="javascript:void(0)" onclick="show({form})">reply</a></li>
-	</ul>
-	<form id="reply-{id}" style="display: none;" method="post" onsubmit="send(this); return false;">
-		<input name="parent" value="{id}" style="display: none;">
-		Name: <input type="text" name="name" required><br>
-		<textarea name="content" required></textarea><br>
-		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
-		<div class="g-recaptcha"
-			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
-		<input type="submit">
-	</form>
-</div>"#,
+			include_str!("web/comment.html"),
 			author = self.author,
 			color = color_name(self.id),
 			content = self.content.render_html(),
@@ -71,22 +56,8 @@ impl CommentList for Vec<Comment> {
 		if self.len() == 0 { return string }
         // Get comments with desired parent comment
 		for comment in self.with_parent_id(root) {
-			string.push_str(&format!(r#"<div class="comment color-{color}">
-	<h3>{author}</h3><div class="time">{time}</div>
-	<p>{content}
-	<ul class="comment-buttons">
-		<li><a href="javascript:void(0)" onclick="show({form})">reply</a></li>
-	</ul>
-	<form id="reply-{id}" style="display: none;" method="post" action="/comment.cgi" onsubmit="send(this); return false;">
-		<input name="parent" value="{id}" style="display: none;">
-		Name: <input type="text" name="name" required><br>
-		<input type="textarea" name="content" required>
-		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
-		<input type="submit" value="Submit">
-		<div class="g-recaptcha"
-			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
-	</form>
-			{children}</div>"#,
+			string.push_str(&format!(
+				include_str!("web/comment-list.html"),
                 author = comment.author,
 				color = color_name(comment.id),
                 content = comment.content.render_html(),

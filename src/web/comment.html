@@ -1,0 +1,16 @@
+<div class="comment color-{color}">
+	<h3>{author}</h3><div class="time">{time}</div>
+	{content}
+	<ul class="comment-buttons">
+		<li><a href="javascript:void(0)" onclick="show({form})">reply</a></li>
+	</ul>
+	<form id="reply-{id}" style="display: none;" method="post" onsubmit="send(this); return false;">
+		<input name="parent" value="{id}" style="display: none;">
+		Name: <input type="text" name="name" required><br>
+		<textarea name="content" required></textarea><br>
+		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
+		<div class="g-recaptcha"
+			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
+		<input type="submit">
+	</form>
+</div>

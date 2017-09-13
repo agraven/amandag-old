@@ -5,84 +5,7 @@ use amandag::Comment;
 use amandag::CommentList;
 use amandag::mysql;
 use amandag::Post;
-use amandag::strings;
 use amandag::time;
-
-fn format_document_header(title: &str, post_id: u64) -> String {
-	format!(r##"Content-type: text/html; charset=utf-8
-X-Powered-By: Rust/1.19.0
-Content-Language: en
-
-<!DOCTYPE html>
-<html>
-<head>
-	<title>{title}</title>
-	<meta name="author" content="Amanda Graven">
-	<meta name="description" content="Personal homepage of Amanda Graven">
-
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" type="text/css" href="/style.css">
-	<script src='https://www.google.com/recaptcha/api.js'></script>
-	<script>
-		function show(element) {lbrace}
-			element.style.display = "block";
-		{rbrace}
-		function hide(element) {lbrace}
-			element.style.display = "none";
-		{rbrace}
-		function send(form) {lbrace}
-			function urlencodeFormData(fd) {lbrace}
-				var s = '';
-				function encode(s){lbrace}
-					return encodeURIComponent(s).replace(/%20/g,'+');
-				{rbrace}
-				for(var pair of fd.entries()) {lbrace}
-					if(typeof pair[1]=='string') {lbrace}
-						s += (s?'&':'') + encode(pair[0])+'='+encode(pair[1]);
-					{rbrace}
-				{rbrace}
-				return s;
-			{rbrace}
-			var data = new FormData(form);
-			data.set("post", {post});
-			for (var key of data.keys()) {lbrace}
-				console.log('Key: ' + key);
-			{rbrace}
-
-			var request = new XMLHttpRequest();
-			request.open("POST", "/comment.cgi", true);
-			request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			request.onreadystatechange = function() {lbrace}
-				if (this.readyState == 4 && this.status == 200) {lbrace}
-					form.parentElement.innerHTML += this.responseText;
-				{rbrace}
-			{rbrace}
-			request.send(urlencodeFormData(data));
-		{rbrace}
-	</script>
-</head>
-<body>
-	<div id="headbar">
-		<div id="headbar-content">
-			<div class="title" style="float: left;">Amanda's terrible homepage</div>
-			<ul class="navbar">
-				<li><a href="/">Home</a></li>
-				<li><a href="/about">About</a></li>
-			</ul>
-		</div>
-	</div>
-	<div id="easter-egg"> </div>
-	<main>
-		<div id="body-title">
-			<div class="title">Amanda's terrible homepage</div>
-		</div>"##,
-		title = title,
-		post = post_id,
-		lbrace = '{',
-		rbrace = '}'
-	)
-}
 
 fn main() {
 	// Get map of GET request and get id
@@ -145,16 +68,12 @@ fn main() {
     }).unwrap();
 
 	// print document
-	println!("{}", format_document_header(&post.title, post.id));
-	println!("{}", post.display());
-	println!(r#"<article><form action="/comment.cgi" id="reply-root" method="post" onsubmit="send(this); return false;">
-		<input name="parent" value="-1" style="display: none;">
-		Name: <input type="text" name="name" required><br>
-		<textarea name="content" required></textarea><br>
-		<div class="g-recaptcha"
-			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
-		<button type="submit">Submit</button>
-	</form></article>"#);
-	println!("{}", comments.display());
-	println!("{}", strings::DOCUMENT_FOOTER);
+	println!(include_str!("../web/view.html"),
+		title = post.title,
+		post = post.id,
+		article = post.display(),
+		comments = comments.display(),
+		lbrace = "{",
+		rbrace = "}"
+	);
 }

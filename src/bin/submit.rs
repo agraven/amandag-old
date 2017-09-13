@@ -6,7 +6,6 @@ use std::fmt::{self, Display, Formatter};
 
 use amandag::captcha;
 use amandag::cgi;
-use amandag::strings;
 use amandag::mysql;
 
 // Error definitions
@@ -55,12 +54,10 @@ fn main() {
 	match run() {
 		Ok(()) => (),
 		Err(err) => {
-			println!("{}{}{}{}",
-				strings::format_document_header("Error"),
-				"<article><h1>Internal server error</h1>The page could \
-				not be displayed because of an internal error: ",
-				err,
-				format!("</article>\n{}", strings::DOCUMENT_FOOTER)
+			println!(include_str!("index.html"),
+				title = "Error:",
+				content = format!("<article><h1>Internal server error</h1>The page could \
+				not be displayed because of an internal error: {}", err),
 			);
 		},
 	};
@@ -100,17 +97,18 @@ fn run() -> Result<(), Error> {
 				(title, content, category)
 			)?;
 
-		println!("{}", strings::format_document_header("Article submitted"));
-		println!("<article>Article submitted. Here's a preview of its contents:
-			<h1>{}</h1><p>{}</article>", title, content);
-		println!("{}", strings::DOCUMENT_FOOTER);
+		println!(include_str!("../web/index.html"),
+			title = "Article submitted",
+			content = "<article>Article submitted.</article>"
+		);
 
 		return Ok(());
 	}
 	// Print submission form
-	println!("{}", strings::format_captcha_header("Submit post"));
-	println!("{}", strings::SUBMIT_CONTENT);
-	println!("{}", strings::DOCUMENT_FOOTER);
+	println!(include_str!("../web/index.html"),
+		title = "Amanda Graven's homepage - Submit article",
+		content = include_str!("submit.html")
+	);
 
 	Ok(())
 }

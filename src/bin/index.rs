@@ -2,7 +2,6 @@ extern crate amandag;
 
 use amandag::mysql;
 use amandag::post::Post;
-use amandag::strings;
 use amandag::time;
 
 fn main() {
@@ -35,9 +34,12 @@ fn main() {
 		}).unwrap();
 
 	// Print document
-	println!("{}", strings::format_document_header("Amanda Graven's Homepage"));
+	let mut articles = String::new();
 	for post in selected_posts {
-		println!("{}", post.display());
+		articles.push_str(&post.display());
 	}
-	println!("{}", strings::DOCUMENT_FOOTER);
+	format!(include_str!("../web/index.html"),
+		title = "Amanda Graven's homepage",
+		content = articles,
+	);
 }
