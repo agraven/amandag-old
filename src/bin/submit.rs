@@ -54,7 +54,7 @@ fn main() {
 	match run() {
 		Ok(()) => (),
 		Err(err) => {
-			println!(include_str!("index.html"),
+			println!(include_str!("../web/index.html"),
 				title = "Error:",
 				content = format!("<article><h1>Internal server error</h1>The page could \
 				not be displayed because of an internal error: {}", err),
@@ -107,7 +107,7 @@ fn run() -> Result<(), Error> {
 	// Print submission form
 	println!(include_str!("../web/index.html"),
 		title = "Amanda Graven's homepage - Submit article",
-		content = include_str!("submit.html")
+		content = include_str!("../web/submit.html")
 	);
 
 	Ok(())
