@@ -5,21 +5,24 @@ body {
 /* Head/navbar styling */
 .title {
 	font-family: sans;
+	padding: 0.5em;
 }
 ul.navbar {
 	list-style-type: none;
 	margin: 0;
 	padding: 0;
-	float: right;
+	overflow: hidden;
+	margin-left: 50px;
+	float: left;
 }
 ul.navbar li {
-	display: block;
-	width: 4em;
 	float: left;
 }
 ul.navbar li a {
+	display: block;
 	text-decoration: none;
 	color: #99AAFF;
+	padding: 0.5em;
 }
 ul.navbar li a:hover {
 	color: #AABBFF;
@@ -44,7 +47,6 @@ ul.navbar li a:hover {
 }
 #headbar-content {
 	overflow: auto;
-	padding: 0.5em;
 }
 
 #easter-egg {
@@ -86,10 +88,12 @@ article {
 	padding: 12px;
 	box-sizing: border-box;
 	margin-top: 12px;
+	overflow: hidden;
 }
 h1 { margin: 0; }
 a {
 	color: #FFF;
+	font-style: italic;
 	text-decoration: none;
 }
 a:hover {
