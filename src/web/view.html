@@ -12,10 +12,19 @@ Content-Language: en
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="/style.css">
-	<script src='https://www.google.com/recaptcha/api.js'></script>
+	<script src='https://www.google.com/recaptcha/api.js?render=explicit&onload=captchaLoad' async defer></script>
 	<script>
+		var captchaLoad = function() {lbrace}
+			grecaptcha.render(
+				'root-captcha',
+				{lbrace} 'sitekey' : '6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV' {rbrace}
+			);
 		function show(element) {lbrace}
 			element.style.display = "block";
+			grecaptcha.render(
+				element.getElementsByClassName("g-recaptcha")[0],
+				{lbrace} 'sitekey' : '6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV' {rbrace}
+			);
 		{rbrace}
 		function hide(element) {lbrace}
 			element.style.display = "none";
@@ -72,7 +81,10 @@ Content-Language: en
 				<input name="parent" value="-1" style="display: none;">
 				Name: <input type="text" name="name" required><br>
 				<textarea name="content" required></textarea><br>
-				<div class="g-recaptcha" data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
+				<div
+					id="root-captcha"
+					class="g-recaptcha"
+	 				data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
 				<button type="submit">Submit</button>
 			</form>
 		</article>
@@ -80,4 +92,3 @@ Content-Language: en
 	</main>
 </body>
 </html>
-
