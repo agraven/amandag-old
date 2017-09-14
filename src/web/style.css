@@ -91,12 +91,12 @@ article {
 	overflow: hidden;
 }
 h1 { margin: 0; }
-a {
+article a, div.comment a {
 	color: #FFF;
 	font-style: italic;
 	text-decoration: none;
 }
-a:hover {
+article a:hover, div.comment a:hover {
 	color: #FFF;
 	text-decoration: underline;
 }
@@ -162,7 +162,9 @@ input[name="name"]:focus, input[name="title"]:focus {
 	border-bottom: solid white 2px;
 }
 textarea {
+	width: 100%;
 	box-sizing: border-box;
+	overflow: hidden;
 	resize: vertical;
 	background: transparent;
 	border: solid #AAA 1px;
