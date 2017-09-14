@@ -20,6 +20,10 @@ Content-Language: en
 				{lbrace} 'sitekey' : '6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV' {rbrace}
 			);
 		{rbrace}
+		function setHeight(elem) {lbrace}
+			elem.style.height = '1px';
+			elem.style.height = elem.scrollHeight + 'px';
+		{rbrace}
 		function show(element) {lbrace}
 			element.style.display = "block";
 			grecaptcha.render(
@@ -78,15 +82,19 @@ Content-Language: en
 		</div>
 		{article}
 		<article>
-			<form action="/comment.cgi" id="reply-root" method="post" onsubmit="send(this); return false;">
+			<form action="/comment.cgi" class="comment" id="reply-root" method="post" onsubmit="send(this); return false;">
 				<input name="parent" value="-1" style="display: none;">
-				Name: <input type="text" name="name" required><br>
-				<textarea name="content" required></textarea><br>
+				<input type="text" name="name" placeholder="Name" required>
+				<p>
+				<textarea name="content"
+					onkeydown="setHeight(this)"
+					onkeyup="setHeight(this)" required></textarea>
+				<p>
 				<div
 					id="root-captcha"
 					class="g-recaptcha"
 	 				data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
-				<button type="submit">Submit</button>
+				<input type="submit" value="Submit">
 			</form>
 		</article>
 		{comments}

@@ -118,11 +118,6 @@ footer {
 	font-style: italic;
 	font-family: sans;
 }
-textarea {
-	height: 10ex;
-	width: 100%;
-	max-width: 40em;
-}
 
 /* Comment styling */
 div.comment {
@@ -147,6 +142,37 @@ div.comment div.time {
 }
 div.time + p {
 	margin-top: 0.5em;
+}
+form {
+	background: #345;
+	padding: 12px;
+}
+main > form.comment { margin-top: 12px; }
+div.comment form.comment { margin-left: 12px; }
+input[name="name"], input[name="title"] {
+	font: large bold serif;
+	color: white;
+	border: none;
+	border-bottom: solid #AAA 2px;
+	outline: none;
+	background: transparent;
+	transition: border-bottom-color 0.3s;
+}
+input[name="name"]:focus, input[name="title"]:focus {
+	border-bottom: solid white 2px;
+}
+textarea {
+	box-sizing: border-box;
+	resize: vertical;
+	background: transparent;
+	border: solid #AAA 1px;
+	font: serif;
+	outline: none;
+	transition: border 0.3s ease-in-out;
+}
+textarea:focus {
+	border-radius: 2px;
+	border: solid white 2px;
 }
 div.color-ice div.time {
 	color: #333!important;

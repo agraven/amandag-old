@@ -4,13 +4,13 @@
 	<ul class="comment-buttons">
 		<li><a href="javascript:void(0)" onclick="show({form})">reply</a></li>
 	</ul>
-	<form id="reply-{id}" style="display: none;" method="post" action="/comment.cgi" onsubmit="send(this); return false;">
+	<form id="reply-{id}" class="comment" style="display: none;" method="post" action="/comment.cgi" onsubmit="send(this); return false;">
 		<input name="parent" value="{id}" style="display: none;">
 		Name: <input type="text" name="name" required><br>
-		<input type="textarea" name="content" required>
+		<textarea name="content" onkeydown="setHeight(this)" onkeyup="setHeight(this)" required></textarea>
 		<input type="button" value="Cancel" onclick="hide(this.parentElement)">
-		<input type="submit" value="Submit">
 		<div class="g-recaptcha"
 			data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
+		<input type="submit" value="Submit">
 	</form>
 			{children}</div>
