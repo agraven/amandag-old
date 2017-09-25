@@ -5,7 +5,7 @@ use cgi::Encode;
 use self::time::Timespec;
 
 // TODO: rename to Article?
-pub struct Post {
+pub struct Article {
 	pub id: u64,
 	pub title: String,
 	pub content: String,
@@ -15,7 +15,7 @@ pub struct Post {
 	pub comment_count: i64,
 }
 
-impl Post {
+impl Article {
 	pub fn display(&self) -> String {
 		// Only show edit time when it's greater than post time
 		let time_string = if self.post_time < self.edit_time {
@@ -28,7 +28,7 @@ impl Post {
 			format!("Submitted {}", time::at(self.post_time).ctime())
 		};
 		// Print article
-		format!(include_str!("web/post.html"),
+		format!(include_str!("web/article.html"),
 			id = self.id,
 			title = self.title,
 			time = time_string,

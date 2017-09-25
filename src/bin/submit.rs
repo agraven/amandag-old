@@ -46,7 +46,7 @@ impl Display for Error {
 			SqlError(ref e) => format!("Database error: {}", e),
 			Utf8Error(ref e) => format!("Invalid UTF-8: {}", e),
 		})?;
-		Ok(())	
+		Ok(())
 	}
 }
 
@@ -105,6 +105,7 @@ fn run() -> Result<(), Error> {
 		return Ok(());
 	}
 	// Print submission form
+    println!("{}\n", include_str!("../web/http-headers"));
 	println!(include_str!("../web/index.html"),
 		title = "Amanda Graven's homepage - Submit article",
 		content = include_str!("../web/submit.html")

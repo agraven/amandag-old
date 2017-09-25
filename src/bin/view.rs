@@ -4,7 +4,7 @@ use amandag::cgi;
 use amandag::Comment;
 use amandag::CommentList;
 use amandag::mysql;
-use amandag::Post;
+use amandag::Article;
 use amandag::time;
 
 fn main() {
@@ -16,7 +16,7 @@ fn main() {
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")
 		.expect("Failed to connect to database");
 	// Get first (and hopefully only) article result
-	let post: Post = if let Some(row) =
+	let article: Article = if let Some(row) =
 		pool.first_exec(
 			"SELECT id, title, content, post_time, edit_time, category \
 				FROM posts WHERE id = ?",
@@ -41,9 +41,9 @@ fn main() {
 				).unwrap() {
 					mysql::from_row_opt(row).unwrap_or(0)
 				} else { 0 };
-			Post { id, title, content, post_time, edit_time, category, comment_count }
+			Article { id, title, content, post_time, edit_time, category, comment_count }
 		} else {
-			Post {
+			Article {
 				id: 0,
 				title: String::from("Invalid id"),
 				content:
@@ -68,12 +68,11 @@ fn main() {
     }).unwrap();
 
 	// print document
+    println!("{}\n", include_str!("../web/http-headers"));
 	println!(include_str!("../web/view.html"),
-		title = post.title,
-		post = post.id,
-		article = post.display(),
+		title = article.title,
+		id = article.id,
+		article = article.display(),
 		comments = comments.display(),
-		lbrace = "{",
-		rbrace = "}"
 	);
 }

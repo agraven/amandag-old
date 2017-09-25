@@ -67,7 +67,7 @@ fn run() -> Result<(), Error> {
 	};
 	let author = get("name")?.clone();
 	let content = get("content")?.clone();
-	let post_id = get("post")?.parse::<i64>()?;
+	let post_id = get("id")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
 	let response = get("g-recaptcha-response")?;
 	let secret = String::from_utf8(
@@ -104,7 +104,7 @@ fn run() -> Result<(), Error> {
 		(id, &author, &content, post_id, parent_id)
 	)?;
 	let post_time = time::get_time();
-	
+
 	println!(
 		"Content-Type: text/html; charset=utf-8\n\n{}",
 		Comment {id, author, content, post_time, parent_id}.display()
