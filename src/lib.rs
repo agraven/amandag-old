@@ -3,10 +3,11 @@ pub extern crate serde_derive;
 pub extern crate mysql;
 pub extern crate time;
 
+pub mod article;
 pub mod captcha;
 pub mod cgi;
 pub mod comment;
-pub mod article;
+mod error;
 
 pub use article::Article;
 pub use comment::Comment;

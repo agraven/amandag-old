@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate amandag;
 
 use amandag::captcha;
@@ -8,18 +9,6 @@ use amandag::time;
 
 use std::fs::File;
 use std::io::Read;
-
-macro_rules! impl_error {
-	[ $( ($l:ident, $f:ty) ),* ] => {
-		$(
-			impl From<$f> for Error {
-				fn from(err: $f) -> Error {
-					Error::$l(err)
-				}
-			}
-		)*
-	}
-}
 
 enum Error {
 	CaptchaError(captcha::Error),
@@ -88,6 +77,7 @@ fn run() -> Result<(), Error> {
 
 	let options = format!("mysql://root:{}@localhost:3306/amandag", password);
 	let pool = mysql::Pool::new(options)?;
+    // Get a unique id
 	let id: u64 = mysql::from_row(pool.first_exec(r#"SELECT min(unused) AS unused
 		FROM (
 			SELECT MIN(t1.id)+1 as unused

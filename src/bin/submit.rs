@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate amandag;
 
 use std::fs::File;
@@ -18,18 +19,6 @@ enum Error {
 }
 use Error::*;
 
-// Macro for quick implementation of From<T> for Error
-macro_rules! impl_error {
-	[ $( ($l:ident, $f:ty) ),* ] => {
-		$(
-			impl From<$f> for Error {
-				fn from(err: $f) -> Error {
-					Error::$l(err)
-				}
-			}
-		)*
-	}
-}
 impl_error![
 	(CaptchaError, captcha::Error),
 	(IoError, io::Error),
