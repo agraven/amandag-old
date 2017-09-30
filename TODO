@@ -2,4 +2,4 @@
 * Authentication system
 * Article editing/deletion
 * Prettier styling
-* Use error chain?
+* Consider adding pepper encryption to password hashes
