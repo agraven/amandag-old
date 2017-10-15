@@ -1,0 +1,14 @@
+		<form action="/comment.cgi" class="comment" id="reply-root" method="post" onsubmit="send(this); return false;">
+			<input name="parent" value="-1" style="display: none;">
+			<input type="text" name="name" placeholder="Name" required>
+			<p>
+			<textarea name="content"
+				onkeydown="setHeight(this)"
+				onkeyup="setHeight(this)" required></textarea>
+			<p>
+			<div
+				id="root-captcha"
+				class="g-recaptcha"
+				data-sitekey="6Lcs3ywUAAAAAN7ASI4sa9wr8ujsfoZd0xgnpnWV"></div>
+			<input type="submit" value="Submit">
+		</form>

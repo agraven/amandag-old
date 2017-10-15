@@ -5,7 +5,7 @@ use crypto::sha2::Sha512;
 use crypto::digest::Digest;
 use rand::{self, Rng};
 use time;
-use time::Timespec;
+use time::{Duration, Timespec};
 use mysql;
 
 const SALT_LENGTH: usize = 16;
@@ -15,7 +15,7 @@ const ADDRESS: &'static str = "mysql://readonly:1234@localhost/amandag";
 const INSERT_TOKEN: &'static str = "INSERT INTO tokens (token, hash, user, expires) VALUES (?, ?, ?)";
 const INSERT_USER: &'static str = "INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
 const DELETE_TOKEN: &'static str = "DELETE FROM tokens WHERE token = ?";
-const SELECT_TOKEN: &'static str = "SELECT token FROM tokens WHERE hash = ?";
+const SELECT_TOKEN: &'static str = "SELECT token, expiry FROM tokens WHERE hash = ?";
 const SELECT_USER: &'static str = "SELECT pass, salt FROM users WHERE id = ?";
 
 error_chain! {
@@ -25,24 +25,24 @@ error_chain! {
     }
     errors {
         ExpiredToken {
-            description("token has expired")
-            display("Token has expired")
+            description("token has expired"),
+            display("Token has expired"),
         }
         InvalidToken {
-            description("token is invalid")
-            display("Invalid login token")
+            description("token is invalid"),
+            display("Invalid login token"),
         }
         NoSuchToken {
-            description("no such token")
-            display("Attemped to login with nonexistant token")
+            description("no such token"),
+            display("Attemped to login with nonexistant token"),
         }
         NoSuchUser(s: String) {
-            description("no such user")
-            display("The user {} doesn't exist", s)
+            description("no such user"),
+            display("The user {} doesn't exist", s),
         }
         WrongPassword {
-            description("wrong password")
-            display("Wrong password")
+            description("wrong password"),
+            display("Wrong password"),
         }
     }
 }
@@ -87,10 +87,10 @@ fn verify_hmac(result: MacResult, hash: &str) -> bool {
 }
 
 /// Verify a login token
-pub fn auth(user: &str, expiry: Timespec, hash: &str) -> Result<Token> {
+pub fn auth(user: &str, hash: &str) -> Result<Token> {
     let pool = mysql::Pool::new(ADDRESS)?;
     if let Some(row) = pool.first_exec(SELECT_TOKEN, (hash,))? {
-        let token: String = mysql::from_row(row);
+        let (token, expiry): (String, Timespec) = mysql::from_row(row);
         if !verify_hmac(hmac(&token, user), hash) {
             return Err(ErrorKind::InvalidToken.into());
         } else if expiry < time::get_time() {
@@ -113,7 +113,7 @@ pub fn login(user: &str, password: &str) -> Result<Token> {
             // Correct password, create token
             let token = rand_str_len(TOKEN_LENGTH);
             let hash = String::from_utf8(hmac(&token, user).code().to_owned())?;
-            let expiry = time::get_time();
+            let expiry = time::get_time() + Duration::days(30);
             pool.prep_exec(INSERT_TOKEN, (&token, &user, expiry))?;
             Ok(Token {hash, user: user.to_owned(), expiry})
         } else {

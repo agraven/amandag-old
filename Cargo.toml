@@ -2,6 +2,11 @@
 name = "amandag"
 version = "0.3.0"
 authors = ["Amanda P. Graven <amanda@amandag.net>"]
+homepage = "https://amandag.net"
+repository = "https://github.com/agraven/amandag"
+readme = "README.md"
+categories = ["web-programming"]
+license = "AGPL-3.0"
 
 [profile.release]
 lto = true
@@ -14,6 +19,7 @@ hyper = "0.11"
 hyper-tls = "0.1.2"
 mime = "0.3"
 mysql = "12.0.1"
+native-tls = "0.1"
 rand = "0.3"
 rust-crypto = "0.2"
 serde = "1.0.11"

@@ -1,5 +1,6 @@
-#[macro_use]
 extern crate amandag;
+#[macro_use]
+extern crate error_chain;
 
 use amandag::captcha;
 use amandag::cgi;
@@ -10,49 +11,42 @@ use amandag::time;
 use std::fs::File;
 use std::io::Read;
 
-enum Error {
-	CaptchaError(captcha::Error),
-	IoError(std::io::Error),
-	MethodError,
-	MissingError(&'static str),
-	ParseIntError(std::num::ParseIntError),
-	SqlError(mysql::Error),
-	Utf8Error(std::string::FromUtf8Error),
+error_chain! {
+    links {
+        Captcha(captcha::Error, captcha::ErrorKind);
+    }
+    foreign_links {
+        Io(std::io::Error);
+        ParseInt(std::num::ParseIntError);
+        Sql(mysql::Error);
+        Utf8(std::string::FromUtf8Error);
+    }
+    errors {
+        MissingParam(p: &'static str) {
+            description("missing POST paramater"),
+            display("Missing POST paramater: {}", p),
+        }
+        Method {
+            description("wrong http method"),
+            display("Wrong HTTP method, expected POST."),
+        }
+    }
 }
-use Error::*;
-
-impl_error![
-	(CaptchaError, captcha::Error),
-	(IoError, std::io::Error),
-	(ParseIntError, std::num::ParseIntError),
-	(SqlError, mysql::Error),
-	(Utf8Error, std::string::FromUtf8Error)
-];
 
 fn main() {
-	match run() {
-		Ok(()) => (),
-		Err(e) => match e {
-			CaptchaError(e) => panic!("reCAPTCHA failed: {}", e),
-			IoError(e) => panic!("I/O Error: {}", e),
-			MethodError => panic!("Wrong request method"),
-			MissingError(p) => panic!("Missing parameter {}", p),
-			ParseIntError(e) => panic!("Int parsing error: {}", e),
-			SqlError(e) => panic!("Database error: {}", e),
-			Utf8Error(e) => panic!("UTF-8 parsing error: {}", e),
-		}
+	if let Err(e) = run() {
+        panic!(e.to_string())
 	}
 }
 
-fn run() -> Result<(), Error> {
-	// TODO: end-user friendly error messages
+fn run() -> Result<()> {
 	if !cgi::request_method_is("POST") {
-		return Err(MethodError);
+		return Err(ErrorKind::Method.into());
 	}
 	let post_map = cgi::get_post().unwrap();
 	// Get values
-	let get = |key: &'static str| -> Result<&String, Error> {
-		post_map.get(key).ok_or(MissingError(key))
+	let get = |key: &'static str| -> Result<&String> {
+		post_map.get(key).ok_or(ErrorKind::MissingParam(key).into())
 	};
 	let author = get("name")?.clone();
 	let content = get("content")?.clone();

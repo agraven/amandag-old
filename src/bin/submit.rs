@@ -1,32 +1,37 @@
-#[macro_use]
 extern crate amandag;
+#[macro_use]
+extern crate error_chain;
 
 use std::fs::File;
-use std::io::{self, Read};
-use std::fmt::{self, Display, Formatter};
+use std::io::Read;
 
+use amandag::auth;
 use amandag::captcha;
 use amandag::cgi;
 use amandag::mysql;
 
 // Error definitions
-enum Error {
-	CaptchaError(captcha::Error),
-	IoError(io::Error),
-	MissingError(&'static str),
-	SqlError(mysql::error::Error),
-	Utf8Error(std::string::FromUtf8Error),
+error_chain! {
+	foreign_links {
+		Captcha(captcha::Error);
+		Io(std::io::Error);
+		Sql(mysql::Error);
+		Utf8(std::string::FromUtf8Error);
+	}
+    links {
+        Auth(auth::Error, auth::ErrorKind);
+        Cookie(cgi::Error, cgi::ErrorKind);
+    }
+	errors {
+		Param(s: &'static str) {
+			description("missing POST parameter"),
+			display("Missing POST value: {}", s),
+		}
+	}
 }
-use Error::*;
+use ErrorKind::Param;
 
-impl_error![
-	(CaptchaError, captcha::Error),
-	(IoError, io::Error),
-	(SqlError, mysql::Error),
-	(Utf8Error, std::string::FromUtf8Error)
-];
-
-impl Display for Error {
+/*impl Display for Error {
 	fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
 		write!(f, "{}", match *self {
 			CaptchaError(ref e) => format!("reCAPTCHA failed: {}", e),
@@ -37,33 +42,30 @@ impl Display for Error {
 		})?;
 		Ok(())
 	}
-}
+}*/
 
 fn main() {
-	match run() {
-		Ok(()) => (),
-		Err(err) => {
-			println!(include_str!("../web/index.html"),
-				title = "Error:",
-				content = format!("<article><h1>Internal server error</h1>The page could \
-				not be displayed because of an internal error: {}", err),
-			);
-		},
-	};
+	if let Err(e) = run() {
+        println!(include_str!("../web/index.html"),
+            title = "Error:",
+            head = "",
+            content = format!("<article><h1>Internal server error</h1>\
+                The page could not be displayed because of an internal \
+                error: {}</article>", e),
+        );
+    }
 }
 
-fn run() -> Result<(), Error> {
+fn run() -> Result<()> {
 	// If article was submitted, don't print submisstion form
 	if cgi::request_method_is("POST") {
 		// Get a map of POST values
 		let map = cgi::get_post().expect("Failed to get post values");
 
 		// Get values from POST
-		let get = |key: &'static str| -> Result<&String, Error> {
-			map.get(key).ok_or(MissingError(key))
+		let get = |key: &'static str| -> Result<&String> {
+			map.get(key).ok_or(Param(key).into())
 		};
-		let user = get("user")?;
-		let password = get("password")?;
 		let title = get("title")?;
 		let content = get("content")?;
 		let category = get("category")?;
@@ -74,6 +76,19 @@ fn run() -> Result<(), Error> {
 				.map(|b| b.unwrap())
 				.collect()
 		)?;
+        let password = String::from_utf8(
+			File::open("secret/db-submit")?
+				.bytes()
+				.map(|b| b.unwrap())
+				.collect()
+		)?;
+        // Verify user is authenticated
+        let cookies = cgi::get_cookies()?;
+        let user = cookies.get("user").ok_or::<Error>(Param("user").into())?;
+        let token = cookies.get("token").ok_or::<Error>(Param("token").into())?;
+        if let Err(e) = auth::auth(user, token) {
+            bail!(e)
+        }
 
 		// Verify captcha
 		captcha::verify(&secret, &response)?;
@@ -88,15 +103,17 @@ fn run() -> Result<(), Error> {
 
 		println!(include_str!("../web/index.html"),
 			title = "Article submitted",
+            head = "",
 			content = "<article>Article submitted.</article>"
 		);
 
 		return Ok(());
 	}
 	// Print submission form
-    println!("{}\n", include_str!("../web/http-headers"));
+	println!("{}\n", include_str!("../web/http-headers"));
 	println!(include_str!("../web/index.html"),
 		title = "Amanda Graven's homepage - Submit article",
+		head = "",
 		content = include_str!("../web/submit.html")
 	);
 

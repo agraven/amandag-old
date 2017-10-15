@@ -1,20 +1,12 @@
-		<article>
+		<form action="submit.cgi" method="post">
 			<h1>Submit post</h1>
-			<form action="submit.cgi" method="post">
-				Title:<br>
-				<input type="text" name="title">
-				<br>Category:<br>
-				<input type="text" name="category">
-				<p>Content:<br>
-				<textarea rows="1" cols="1" name="content"></textarea>
-
-				<p>User:<br>
-				<input type="text" name="user">
-				<br>Password:<br>
-				<input type="password" name="password">
-
-				<p>
+			<p>
+				<input type="text" name="title" placeholder="Title">
+				<input type="text" name="category" placeholder="Category">
+			<p>
+			<textarea rows="1" cols="1" name="content"></textarea>
+			<div class="g-recaptcha" data-sitekey="6LdO2SoUAAAAAPOph0HIJ7mUUEnDsG_mfS0AHL1L"></div>
+			<p class="button-list">
 				<input id="submit" type="submit" value="Submit"/>
-				<div class="g-recaptcha" data-sitekey="6LdO2SoUAAAAAPOph0HIJ7mUUEnDsG_mfS0AHL1L"></div>
-			</form>
-		</article>
+			</p>
+		</form>

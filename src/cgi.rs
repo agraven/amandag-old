@@ -1,15 +1,26 @@
-extern crate hoedown;
-extern crate url;
-
-use self::url::form_urlencoded;
-use self::hoedown::{Markdown, Html, Render};
-use self::hoedown::renderer::html;
+use url::form_urlencoded;
+use hoedown::{Markdown, Html, Render};
+use hoedown::renderer::html;
 
 use std::env;
 use std::io;
 use std::io::Read;
 use std::collections::HashMap;
 use std::os::unix::ffi::OsStringExt;
+
+error_chain! {
+    errors {
+        CookiesUndefined {
+            description("Cookie environment variable unset"),
+            display("Cookies are not defined"),
+        }
+        OsString {
+            description("OsString contains non-valid unicode"),
+            display("Failed to process foreign string"),
+        }
+    }
+}
+use self::ErrorKind::CookiesUndefined;
 
 pub trait Encode {
 	/// Replace html characters with their escape codes
@@ -39,9 +50,11 @@ impl Encode for String {
 
 /// Returns a map of set cookies by parsing the HTTP_COOKIE environment
 /// variable. The function is not protected from special characters
-pub fn get_cookies() -> Result<HashMap<String, String>, ()> {
+pub fn get_cookies() -> Result<HashMap<String, String>> {
 	let cookies = env::var_os("HTTP_COOKIE")
-		.ok_or(())?.into_string().ok().ok_or(())?;
+        .ok_or::<Error>(CookiesUndefined.into())?
+        .into_string()
+        .ok().ok_or::<Error>(ErrorKind::OsString.into())?;
 	let mut map = HashMap::new();
 	for pair in cookies.split("; ") {
 		let mut iter = pair.splitn(2, '=');

@@ -1,5 +1,6 @@
 body {
 	background: #567;
+	color: white;
 }
 
 /* Head/navbar styling */
@@ -7,13 +8,15 @@ body {
 	font-family: sans;
 	padding: 0.5em;
 }
+#headbar-content .title {
+	float: left;
+}
 ul.navbar {
 	list-style-type: none;
 	margin: 0;
 	padding: 0;
-	overflow: hidden;
 	margin-left: 50px;
-	float: left;
+	display: inline-flex;
 }
 ul.navbar li {
 	float: left;
@@ -47,6 +50,9 @@ ul.navbar li a:hover {
 }
 #headbar-content {
 	overflow: auto;
+}
+#login {
+	float: right;
 }
 
 #easter-egg {
@@ -149,7 +155,7 @@ form {
 }
 main > form.comment { margin-top: 12px; }
 div.comment form.comment { margin-left: 12px; }
-input[name="name"], input[name="title"] {
+input[name="name"], input[name="title"], input[name="category"] {
 	font: large bold serif;
 	color: white;
 	border: none;
@@ -157,9 +163,14 @@ input[name="name"], input[name="title"] {
 	outline: none;
 	background: transparent;
 	transition: border-bottom-color 0.3s;
+	vertical-align: bottom;
 }
-input[name="name"]:focus, input[name="title"]:focus {
+input[name="name"]:focus, input[name="title"]:focus, input[name="category"] {
 	border-bottom: solid white 2px;
+}
+input[name="category"] {
+	float: right;
+	font: small sans;
 }
 textarea {
 	width: 100%;
@@ -168,13 +179,17 @@ textarea {
 	resize: vertical;
 	background: transparent;
 	border: solid #AAA 1px;
-	font: serif;
+	font-family: monospace;
+	font-size: 11pt;
 	outline: none;
 	transition: border 0.3s ease-in-out;
 }
 textarea:focus {
 	border-radius: 2px;
 	border: solid white 2px;
+}
+.button-list {
+	text-align: center;
 }
 div.color-ice div.time {
 	color: #333!important;

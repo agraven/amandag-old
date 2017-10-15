@@ -1,22 +1,16 @@
-extern crate futures;
-extern crate hyper;
-extern crate hyper_tls;
-extern crate mime;
-extern crate serde;
-extern crate serde_json;
-extern crate tokio_core;
+use std;
 
-use std::string;
-use std::fmt::{self, Display, Formatter};
+use futures::{Future, Stream};
+use hyper;
+use hyper::{Client, Method, Request};
+use hyper::header::ContentType;
+use hyper_tls::HttpsConnector;
+use mime::APPLICATION_WWW_FORM_URLENCODED;
+use native_tls;
+use serde_json;
+use tokio_core::reactor::Core;
 
-use self::futures::{Future, Stream};
-use self::hyper::{Client, Method, Request};
-use self::hyper::header::ContentType;
-use self::hyper_tls::HttpsConnector;
-use self::mime::APPLICATION_WWW_FORM_URLENCODED;
-use self::tokio_core::reactor::Core;
-
-// Representation of reCAPTCHA response
+/// Representation of reCAPTCHA response
 #[derive(Serialize, Deserialize)]
 struct CaptchaResponse {
 	success: bool,
@@ -24,80 +18,50 @@ struct CaptchaResponse {
 	hostname: String,
 }
 
-pub enum Error {
-	CaptchaError,
-	HyperError(hyper::Error),
-	IoError(::std::io::Error),
-	JsonError(serde_json::Error),
-	Utf8Error(string::FromUtf8Error),
-	UriError(hyper::error::UriError),
-}
-use self::Error::*;
-
-// Macro for quick implementation of From<T> for Error
-macro_rules! impl_error {
-	[ $( ($l:ident, $f:ty) ),* ] => {
-		$(
-			impl From<$f> for Error {
-				fn from(err: $f) -> Error {
-					Error::$l(err)
-				}
-			}
-		)*
-	}
-}
-impl_error![
-	(HyperError, hyper::Error),
-	(IoError, ::std::io::Error),
-	(JsonError, serde_json::Error),
-	(Utf8Error, string::FromUtf8Error),
-	(UriError, hyper::error::UriError)
-];
-
-impl Display for Error {
-	fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-		write!(
-			f,
-			"{}",
-			match *self {
-				CaptchaError => format!("reCAPTCHA failed"),
-				HyperError(ref e) => format!("HTTP error: {}", e),
-				IoError(ref e) => format!("I/O error: {}", e),
-				JsonError(ref e) => format!("JSON parsing error: {}", e),
-				Utf8Error(ref e) => format!("Invalid UTF-8: {}", e),
-				UriError(ref e) => format!("URI error: {}", e),
-			}
-		)?;
-		Ok(())
-	}
+error_chain! {
+    foreign_links {
+        Hyper(hyper::Error);
+        Io(std::io::Error);
+        Json(serde_json::Error);
+        Tls(native_tls::Error);
+        Utf8(std::string::FromUtf8Error);
+        Uri(hyper::error::UriError);
+    }
+    errors {
+        Captcha {
+            description("reCAPTCHA failed"),
+            display("reCAPTCHA verification failed"),
+        }
+    }
 }
 
-pub fn verify(secret: &str, response: &str) -> Result<(), Error> {
+/// Verifies a reCAPTCHA. Expects input to be URL-encoded, will break otherwise.
+/// Note that if the input contains characters that needs encoding, it's
+/// probably invalid anyway
+pub fn verify(secret: &str, response: &str) -> Result<()> {
 	// Initialize hyper/tokio
 	let mut core = Core::new()?;
 	let client = Client::configure()
-		.connector(HttpsConnector::new(1, &core.handle()).unwrap())
+		.connector(HttpsConnector::new(1, &core.handle())?)
 		.build(&core.handle());
 	// Define request
 	let mut request = Request::new(
 		Method::Post,
 		"https://www.google.com/recaptcha/api/siteverify".parse()?
 	);
-	// TODO: urlencode query
 	let query = format!("secret={}&response={}", secret, response);
 	request.headers_mut().set(ContentType(APPLICATION_WWW_FORM_URLENCODED));
 	request.set_body(query);
 	let work = client.request(request).and_then(|res| {
-		res.body().collect()
+		res.body().concat2()
 	});
 	// Fetch response
-	let body = String::from_utf8(core.run(work)?.iter().fold(
-			// Collect body contents by appending chunk contents to accumulator
-			Vec::new(),
-			|mut acc, c| { acc.extend_from_slice(c); acc }
-	))?;
+	let body = String::from_utf8(core.run(work)?.to_vec())?;
 	// Deserialize response
 	let response: CaptchaResponse = serde_json::from_str(&body)?;
-	if !response.success { return Err(CaptchaError) };
-	Ok(())
+	if !response.success {
+        Err(ErrorKind::Captcha.into())
+    } else {
+        Ok(())
+    }
 }
