@@ -19,20 +19,20 @@ struct CaptchaResponse {
 }
 
 error_chain! {
-    foreign_links {
-        Hyper(hyper::Error);
-        Io(std::io::Error);
-        Json(serde_json::Error);
-        Tls(native_tls::Error);
-        Utf8(std::string::FromUtf8Error);
-        Uri(hyper::error::UriError);
-    }
-    errors {
-        Captcha {
-            description("reCAPTCHA failed"),
-            display("reCAPTCHA verification failed"),
-        }
-    }
+	foreign_links {
+		Hyper(hyper::Error);
+		Io(std::io::Error);
+		Json(serde_json::Error);
+		Tls(native_tls::Error);
+		Utf8(std::string::FromUtf8Error);
+		Uri(hyper::error::UriError);
+	}
+	errors {
+		Captcha {
+			description("reCAPTCHA failed"),
+			display("reCAPTCHA verification failed"),
+		}
+	}
 }
 
 /// Verifies a reCAPTCHA. Expects input to be URL-encoded, will break otherwise.
@@ -60,8 +60,8 @@ pub fn verify(secret: &str, response: &str) -> Result<()> {
 	// Deserialize response
 	let response: CaptchaResponse = serde_json::from_str(&body)?;
 	if !response.success {
-        Err(ErrorKind::Captcha.into())
-    } else {
-        Ok(())
-    }
+		Err(ErrorKind::Captcha.into())
+	} else {
+		Ok(())
+	}
 }

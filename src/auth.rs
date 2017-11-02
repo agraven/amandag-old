@@ -58,7 +58,7 @@ pub struct Token {
     pub expiry: Timespec,
 }
 
-fn rand_str_len(len: usize) -> String {
+fn rand_str(len: usize) -> String {
     rand::thread_rng().gen_ascii_chars().take(len).collect()
 }
 
@@ -111,7 +111,7 @@ pub fn login(user: &str, password: &str) -> Result<Token> {
         let (pass, salt): (String, String) = mysql::from_row(row);
         if hash(password, &salt) == pass {
             // Correct password, create token
-            let token = rand_str_len(TOKEN_LENGTH);
+            let token = rand_str(TOKEN_LENGTH);
             let hash = String::from_utf8(hmac(&token, user).code().to_owned())?;
             let expiry = time::get_time() + Duration::days(30);
             pool.prep_exec(INSERT_TOKEN, (&token, &user, expiry))?;
@@ -126,7 +126,7 @@ pub fn login(user: &str, password: &str) -> Result<Token> {
 
 pub fn create(user: &str, password: &str, name: &str) -> Result<()> {
     let pool = mysql::Pool::new(ADDRESS)?;
-    let salt = rand_str_len(SALT_LENGTH);
+    let salt = rand_str(SALT_LENGTH);
     pool.prep_exec(INSERT_USER, (user, password, salt, name))?;
     Ok(())
 }
