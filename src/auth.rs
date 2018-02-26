@@ -1,7 +1,7 @@
 use crypto::bcrypt::bcrypt;
 use crypto::hmac::Hmac;
 use crypto::mac::{Mac, MacResult};
-use crypto::sha2::Sha512;
+use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use rand::{self, Rng};
 use time;
@@ -65,8 +65,8 @@ fn rand_str(len: usize) -> String {
 fn hash(key: &str, salt: &str) -> String {
     // Hash password to mitigate DoS
     let hex = {
-        let mut digest = Sha512::new();
-        digest.input_str(key);
+        let mut digest = Sha256::new();
+        digest.input_str(&key);
         digest.result_str()
     };
     // Salt
@@ -77,7 +77,7 @@ fn hash(key: &str, salt: &str) -> String {
 }
 
 fn hmac(key: &str, msg: &str) -> MacResult {
-    let mut mac = Hmac::new(Sha512::new(), key.as_bytes());
+    let mut mac = Hmac::new(Sha256::new(), key.as_bytes());
     mac.input(msg.as_bytes());
     mac.result()
 }
@@ -109,7 +109,7 @@ pub fn login(user: &str, password: &str) -> Result<Token> {
     let pool = mysql::Pool::new(ADDRESS)?;
     if let Some(row) = pool.first_exec(SELECT_USER, (user,))? {
         let (pass, salt): (String, String) = mysql::from_row(row);
-        if hash(password, &salt) == pass {
+        if hash(&password, &salt) == pass {
             // Correct password, create token
             let token = rand_str(TOKEN_LENGTH);
             let hash = String::from_utf8(hmac(&token, user).code().to_owned())?;
