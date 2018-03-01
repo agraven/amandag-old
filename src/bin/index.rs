@@ -2,6 +2,8 @@ extern crate amandag;
 #[macro_use]
 extern crate error_chain;
 
+use amandag::auth;
+use amandag::cgi;
 use amandag::Article;
 use amandag::mysql;
 
@@ -29,12 +31,19 @@ fn main() {
             title = "Amanda's homepage: Error",
             head = "",
             content = e.to_string(),
+            user = "",
         );
     }
 }
 
 fn run() -> Result<()> {
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")?;
+    let cookies = cgi::get_cookies();
+    let session = if let Some(id) = cookies.get("session") {
+        auth::auth(&id)?
+    } else {
+        Session{id: String::new(), user: String::from("guest"), expiry: time::get_time()}
+    }?;
 	// Select posts from SQL DATABASE
 	let selected: Vec<Article> = pool.prep_exec(SELECT_ARTICLES, ())
 		.map(|result| {
@@ -56,6 +65,7 @@ fn run() -> Result<()> {
 	}
     println!("{}\n", include_str!("../web/http-headers"));
     println!(include_str!("../web/index.html"),
+        user = session.user,
         title = "Amanda Graven's homepage",
         head = "",
         content = articles,

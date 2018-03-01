@@ -2,6 +2,7 @@ extern crate amandag;
 #[macro_use]
 extern crate error_chain;
 
+use amandag::auth;
 use amandag::cgi;
 use amandag::Comment;
 use amandag::CommentList;
@@ -33,6 +34,7 @@ fn main() {
 		println!(include_str!("../web/index.html"),
 			title = "Internal server error",
             head = "",
+            user = "",
 			content = e.to_string()
 		);
 	}
@@ -46,6 +48,11 @@ fn run() -> Result<()> {
 
 	// Establish connection to MySQL server
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")?;
+    let session = if let Some(id) = cookies.get("session") {
+        auth::auth(&id)?
+    } else {
+        Session{id: String::new(), user: String::from("guest"), expiry: time::get_time()}
+    }?;
     // Get article from database
 	let article: Article = {
 		let row = pool.first_exec(SELECT_POST, (id,))?
@@ -77,9 +84,8 @@ fn run() -> Result<()> {
 	println!("{}\n", include_str!("../web/http-headers"));
 	println!(include_str!("../web/index.html"),
 		title = article.title,
-		head = format!("	<script src='https://www.google.com/recaptcha/api.js?render=explicit&onload=captchaLoad' async defer></script>
-	<script>var id = {};</script>
-	<script src='/view.js'></script>", article.id),
+		head = format!(include_str!("../web/view-head.html"), id = article.id),
+        user = session.user,
 		content = format!("{}{}{}",
             article.display(),
             include_str!("../web/comment-form.html"),
