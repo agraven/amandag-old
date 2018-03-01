@@ -58,13 +58,11 @@ fn result() -> Result<()> {
 
     auth::create(&user, &pass, &name)?;
 
-    let token = auth::login(&user, &pass)?;
+    let session = auth::login(&user, &pass)?;
     println!("{}{}\n\n",
         format!(
-            "Set-Cookie: token={}; Secure; SameSite=Strict\n\
-            Set-Cookie: user={}; Secure; SameSite=Strict",
-            token.hash,
-            token.user
+            "Set-Cookie: token={}; Secure; SameSite=Strict",
+            session.id,
         ),
         include_str!("../web/http-headers")
     );

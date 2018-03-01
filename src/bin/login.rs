@@ -41,15 +41,13 @@ fn run() -> Result<()> {
 		let user = get("user")?;
 		let pass = get("password")?;
 
-		let token = auth::login(&user, &pass)?;
+		let session = auth::login(&user, &pass)?;
 
 		println!("{}{}\n",
 			include_str!("../web/http-headers"),
 			format!(
-				"Set-Cookie: token={}; Secure; SameSite=Strict\n\
-				 Set-Cookie: user={}; Secure; SameSite=Strict",
-				token.hash,
-				token.user
+				"Set-Cookie: session={}; Secure; SameSite=Strict",
+				session.id,
 			)
 		);
 		println!(include_str!("../web/index.html"),

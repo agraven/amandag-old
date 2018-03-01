@@ -1,6 +1,6 @@
 use crypto::bcrypt::bcrypt;
-use crypto::hmac::Hmac;
-use crypto::mac::{Mac, MacResult};
+//use crypto::hmac::Hmac;
+//use crypto::mac::{Mac, MacResult};
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use rand::{self, Rng};
@@ -9,13 +9,13 @@ use time::{Duration, Timespec};
 use mysql;
 
 const SALT_LENGTH: usize = 16;
-const TOKEN_LENGTH: usize = 64;
+const SESSID_LENGTH: usize = 64;
 
 const ADDRESS: &'static str = "mysql://readonly:1234@localhost/amandag";
-const INSERT_TOKEN: &'static str = "INSERT INTO tokens (token, hash, user, expires) VALUES (?, ?, ?)";
+const INSERT_SESSION: &'static str = "INSERT INTO sessions (id, user, expiry) VALUES (?, ?, ?)";
 const INSERT_USER: &'static str = "INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
-const DELETE_TOKEN: &'static str = "DELETE FROM tokens WHERE token = ?";
-const SELECT_TOKEN: &'static str = "SELECT token, expiry FROM tokens WHERE hash = ?";
+const DELETE_SESSION: &'static str = "DELETE FROM sessions WHERE id = ?";
+const SELECT_SESSION: &'static str = "SELECT id, user, expiry FROM tokens WHERE hash = ?";
 const SELECT_USER: &'static str = "SELECT pass, salt FROM users WHERE id = ?";
 
 error_chain! {
@@ -52,8 +52,8 @@ pub struct User {
     pub pass: String,
 }
 
-pub struct Token {
-    pub hash: String,
+pub struct Session {
+    pub id: String,
     pub user: String,
     pub expiry: Timespec,
 }
@@ -76,28 +76,16 @@ fn hash(key: &str, salt: &str) -> String {
     String::from_utf8_lossy(&output).to_string()
 }
 
-fn hmac(key: &str, msg: &str) -> MacResult {
-    let mut mac = Hmac::new(Sha256::new(), key.as_bytes());
-    mac.input(msg.as_bytes());
-    mac.result()
-}
-
-fn verify_hmac(result: MacResult, hash: &str) -> bool {
-    result == MacResult::new_from_owned(hash.to_owned().into_bytes())
-}
-
-/// Verify a login token
-pub fn auth(user: &str, hash: &str) -> Result<Token> {
+/// Verify a login session
+pub fn auth(sessid: &str) -> Result<Session> {
     let pool = mysql::Pool::new(ADDRESS)?;
-    if let Some(row) = pool.first_exec(SELECT_TOKEN, (hash,))? {
-        let (token, expiry): (String, Timespec) = mysql::from_row(row);
-        if !verify_hmac(hmac(&token, user), hash) {
-            return Err(ErrorKind::InvalidToken.into());
-        } else if expiry < time::get_time() {
-            pool.first_exec(DELETE_TOKEN, (token,))?;
+    if let Some(row) = pool.first_exec(SELECT_SESSION, (sessid,))? {
+        let (id, user, expiry): (String, String, Timespec) = mysql::from_row(row);
+        if expiry < time::get_time() {
+            pool.first_exec(DELETE_SESSION, (sessid,))?;
             Err(ErrorKind::ExpiredToken.into())
         } else {
-            return Ok(Token {hash: hash.to_owned(), user: user.to_owned(), expiry});
+            return Ok(Session {id: id.to_owned(), user: user.to_owned(), expiry});
         }
     } else {
         Err(ErrorKind::NoSuchToken.into())
@@ -105,17 +93,16 @@ pub fn auth(user: &str, hash: &str) -> Result<Token> {
 }
 
 /// Sign in user with password, creating a login token
-pub fn login(user: &str, password: &str) -> Result<Token> {
+pub fn login(user: &str, password: &str) -> Result<Session> {
     let pool = mysql::Pool::new(ADDRESS)?;
     if let Some(row) = pool.first_exec(SELECT_USER, (user,))? {
         let (pass, salt): (String, String) = mysql::from_row(row);
         if hash(&password, &salt) == pass {
             // Correct password, create token
-            let token = rand_str(TOKEN_LENGTH);
-            let hash = String::from_utf8(hmac(&token, user).code().to_owned())?;
+            let id = rand_str(SESSID_LENGTH);
             let expiry = time::get_time() + Duration::days(30);
-            pool.prep_exec(INSERT_TOKEN, (&token, &user, expiry))?;
-            Ok(Token {hash, user: user.to_owned(), expiry})
+            pool.prep_exec(INSERT_SESSION, (&id, &user, expiry))?;
+            Ok(Session {id, user: user.to_owned(), expiry})
         } else {
             Err(ErrorKind::WrongPassword.into())
         }
@@ -127,6 +114,6 @@ pub fn login(user: &str, password: &str) -> Result<Token> {
 pub fn create(user: &str, password: &str, name: &str) -> Result<()> {
     let pool = mysql::Pool::new(ADDRESS)?;
     let salt = rand_str(SALT_LENGTH);
-    pool.prep_exec(INSERT_USER, (user, password, salt, name))?;
+    pool.prep_exec(INSERT_USER, (user, hash(&password, &salt), salt, name))?;
     Ok(())
 }

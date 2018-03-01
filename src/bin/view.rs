@@ -38,6 +38,7 @@ fn main() {
 	}
 }
 
+const SELECT_POST: &'static str = "SELECT id, title, content, post_time, edit_time, category FROM posts WHERE id = ?";
 fn run() -> Result<()> {
 	// Get map of GET request and get id
 	let id: i64 = cgi::get_get_member(String::from("id"))
@@ -47,11 +48,8 @@ fn run() -> Result<()> {
 	let pool = mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")?;
     // Get article from database
 	let article: Article = {
-		let row = pool.first_exec(
-			"SELECT id, title, content, post_time, edit_time, category \
-				FROM posts WHERE id = ?",
-			(id,)
-		)?.ok_or(ErrorKind::InvalidId(id as u64))?;
+		let row = pool.first_exec(SELECT_POST, (id,))?
+        .ok_or(ErrorKind::InvalidId(id as u64))?;
 		// Bind values from row
 		let (id, title, content, post_time, edit_time, category) =
 			mysql::from_row(row);
@@ -66,12 +64,12 @@ fn run() -> Result<()> {
 
 	let comments: Vec<Comment> =
 		pool.prep_exec(
-			"SELECT id, author, content, post_time, parent_id \
+			"SELECT id, author, user, content, post_time, parent_id \
 				FROM comments WHERE post_id = ?",
 			(id,)
 		).map(|result| { result.map(|x| x.unwrap()).map(|row| {
-			let (id, author, content, post_time, parent_id) = mysql::from_row(row);
-			Comment {id, author, content, post_time, parent_id}
+			let (id, author, user, content, post_time, parent_id) = mysql::from_row(row);
+			Comment {id, author, user, content, post_time, parent_id}
 		}).collect()
 	})?;
 

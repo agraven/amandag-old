@@ -84,9 +84,8 @@ fn run() -> Result<()> {
 		)?;
         // Verify user is authenticated
         let cookies = cgi::get_cookies()?;
-        let user = cookies.get("user").ok_or::<Error>(Param("user").into())?;
-        let token = cookies.get("token").ok_or::<Error>(Param("token").into())?;
-        if let Err(e) = auth::auth(user, token) {
+        let session = cookies.get("session").ok_or::<Error>(Param("session").into())?;
+        if let Err(e) = auth::auth(session) {
             bail!(e)
         }
 
@@ -94,7 +93,7 @@ fn run() -> Result<()> {
 		captcha::verify(&secret, &response)?;
 
 		// Insert article into database
-		let url = format!("mysql://{}:{}@localhost:3306/amandag", user, password);
+		let url = format!("mysql://submit:{}@localhost:3306/amandag", password);
 		mysql::Pool::new(url)?
 			.prep_exec(
 				"INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",

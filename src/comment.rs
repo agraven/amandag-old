@@ -8,6 +8,7 @@ use self::time::Timespec;
 pub struct Comment {
 	pub id: u64,
 	pub author: String,
+    pub user: String,
 	pub content: String,
 	pub post_time: Timespec,
 	pub parent_id: i64,
@@ -37,6 +38,7 @@ impl Comment {
 		format!(
 			include_str!("web/comment.html"),
 			author = self.author,
+            user = self.user,
 			color = color_name(self.id),
 			content = self.content.render_html(),
 			form = "this.parentElement.parentElement.nextElementSibling",
@@ -59,6 +61,7 @@ impl CommentList for Vec<Comment> {
 			string.push_str(&format!(
 				include_str!("web/comment-list.html"),
                 author = comment.author,
+                user = comment.user,
 				color = color_name(comment.id),
                 content = comment.content.render_html(),
 				form = "this.parentElement.parentElement.nextElementSibling",

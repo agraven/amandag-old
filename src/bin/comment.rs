@@ -49,6 +49,7 @@ fn run() -> Result<()> {
 		post_map.get(key).ok_or(ErrorKind::MissingParam(key).into())
 	};
 	let author = get("name")?.clone();
+    let user = post_map.get("user").unwrap_or(&String::from("guest")).clone();
 	let content = get("content")?.clone();
 	let post_id = get("id")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
@@ -91,7 +92,7 @@ fn run() -> Result<()> {
 
 	println!(
 		"Content-Type: text/html; charset=utf-8\n\n{}",
-		Comment {id, author, content, post_time, parent_id}.display()
+		Comment {id, author, user, content, post_time, parent_id}.display()
 	);
 	Ok(())
 }
