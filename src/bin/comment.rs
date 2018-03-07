@@ -2,9 +2,9 @@ extern crate amandag;
 #[macro_use]
 extern crate error_chain;
 
+use amandag::Comment;
 use amandag::captcha;
 use amandag::cgi;
-use amandag::Comment;
 use amandag::mysql;
 use amandag::time;
 
@@ -12,30 +12,30 @@ use std::fs::File;
 use std::io::Read;
 
 error_chain! {
-    links {
-        Captcha(captcha::Error, captcha::ErrorKind);
-    }
-    foreign_links {
-        Io(std::io::Error);
-        ParseInt(std::num::ParseIntError);
-        Sql(mysql::Error);
-        Utf8(std::string::FromUtf8Error);
-    }
-    errors {
-        MissingParam(p: &'static str) {
-            description("missing POST paramater"),
-            display("Missing POST paramater: {}", p),
-        }
-        Method {
-            description("wrong http method"),
-            display("Wrong HTTP method, expected POST."),
-        }
-    }
+	links {
+		Captcha(captcha::Error, captcha::ErrorKind);
+	}
+	foreign_links {
+		Io(std::io::Error);
+		ParseInt(std::num::ParseIntError);
+		Sql(mysql::Error);
+		Utf8(std::string::FromUtf8Error);
+	}
+	errors {
+		MissingParam(p: &'static str) {
+			description("missing POST paramater"),
+			display("Missing POST paramater: {}", p),
+		}
+		Method {
+			description("wrong http method"),
+			display("Wrong HTTP method, expected POST."),
+		}
+	}
 }
 
 fn main() {
 	if let Err(e) = run() {
-        panic!(e.to_string())
+		panic!(e.to_string())
 	}
 }
 
@@ -46,10 +46,15 @@ fn run() -> Result<()> {
 	let post_map = cgi::get_post().unwrap();
 	// Get values
 	let get = |key: &'static str| -> Result<&String> {
-		post_map.get(key).ok_or(ErrorKind::MissingParam(key).into())
+		post_map
+			.get(key)
+			.ok_or(ErrorKind::MissingParam(key).into())
 	};
 	let author = get("name")?.clone();
-    let user = post_map.get("user").unwrap_or(&String::from("guest")).clone();
+	let user = post_map
+		.get("user")
+		.unwrap_or(&String::from("guest"))
+		.clone();
 	let content = get("content")?.clone();
 	let post_id = get("id")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
@@ -58,7 +63,7 @@ fn run() -> Result<()> {
 		File::open("secret/comment-captcha")?
 			.bytes()
 			.map(|b| b.unwrap())
-			.collect()
+			.collect(),
 	)?;
 
 	captcha::verify(&secret, &response)?;
@@ -67,13 +72,18 @@ fn run() -> Result<()> {
 		File::open("secret/password")?
 			.bytes()
 			.map(|b| b.unwrap())
-			.collect()
+			.collect(),
 	)?;
 
-	let options = format!("mysql://root:{}@localhost:3306/amandag", password);
+	let options = format!(
+		"mysql://root:{}@localhost:3306/amandag",
+		password
+	);
 	let pool = mysql::Pool::new(options)?;
-    // Get a unique id
-	let id: u64 = mysql::from_row(pool.first_exec(r#"SELECT min(unused) AS unused
+	// Get a unique id
+	let id: u64 = mysql::from_row(
+		pool.first_exec(
+			r#"SELECT min(unused) AS unused
 		FROM (
 			SELECT MIN(t1.id)+1 as unused
 			FROM comments AS t1
@@ -82,17 +92,28 @@ fn run() -> Result<()> {
 			SELECT 1
 			FROM DUAL
 			WHERE NOT EXISTS (SELECT * FROM comments WHERE id = 1)
-		) AS subquery"#, ())?.unwrap());
+		) AS subquery"#,
+			(),
+		)?
+			.unwrap(),
+	);
 	pool.prep_exec(
 		"INSERT INTO comments (id, author, content, post_id, parent_id) \
-		VALUES (?, ?, ?, ?, ?)",
-		(id, &author, &content, post_id, parent_id)
+		 VALUES (?, ?, ?, ?, ?)",
+		(id, &author, &content, post_id, parent_id),
 	)?;
 	let post_time = time::get_time();
 
 	println!(
 		"Content-Type: text/html; charset=utf-8\n\n{}",
-		Comment {id, author, user, content, post_time, parent_id}.display()
+		Comment {
+			id,
+			author,
+			user,
+			content,
+			post_time,
+			parent_id,
+		}.display()
 	);
 	Ok(())
 }
