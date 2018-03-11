@@ -1,31 +1,30 @@
-use url::form_urlencoded;
-use hoedown::{Markdown, Html, Render};
+use hoedown::{Html, Markdown, Render};
 use hoedown::renderer::html;
+use url::form_urlencoded;
 
+use std::collections::HashMap;
 use std::env;
 use std::io;
 use std::io::Read;
-use std::collections::HashMap;
 use std::os::unix::ffi::OsStringExt;
 
 error_chain! {
-    errors {
-        CookiesUndefined {
-            description("Cookie environment variable unset"),
-            display("Cookies are not defined"),
-        }
-        OsString {
-            description("OsString contains non-valid unicode"),
-            display("Failed to process foreign string"),
-        }
-    }
+	errors {
+		CookiesUndefined {
+			description("Cookie environment variable unset"),
+			display("Cookies are not defined"),
+		}
+		OsString {
+			description("OsString contains non-valid unicode"),
+			display("Failed to process foreign string"),
+		}
+	}
 }
-use self::ErrorKind::CookiesUndefined;
 
 pub trait Encode {
 	/// Replace html characters with their escape codes
 	fn encode_html(&self) -> String;
-	/// Parse markdown and return its HTML form 
+	/// Parse markdown and return its HTML form
 	fn render_markdown(&self) -> String;
 	/// Render markdown and ensure HTML characters are escaped
 	fn render_html(&self) -> String;
@@ -41,20 +40,20 @@ impl Encode for String {
 	fn render_markdown(&self) -> String {
 		let markdown = Markdown::new(&self.encode_html());
 		let mut html = Html::new(html::Flags::empty(), 0);
-		html.render(&markdown).to_str().unwrap().to_string()
+		html.render(&markdown)
+			.to_str()
+			.unwrap()
+			.to_string()
 	}
-	fn render_html(&self) -> String {
-		self.render_markdown()
-	}
+	fn render_html(&self) -> String { self.render_markdown() }
 }
 
 /// Returns a map of set cookies by parsing the HTTP_COOKIE environment
 /// variable. The function is not protected from special characters
 pub fn get_cookies() -> Result<HashMap<String, String>> {
-	let cookies = env::var_os("HTTP_COOKIE")
-        .ok_or::<Error>(CookiesUndefined.into())?
-        .into_string()
-        .ok().ok_or::<Error>(ErrorKind::OsString.into())?;
+	let cookies_raw = env::var_os("HTTP_COOKIE")
+        .unwrap_or(::std::ffi::OsString::new());
+    let cookies = cookies_raw.to_string_lossy().to_owned();
 	let mut map = HashMap::new();
 	for pair in cookies.split("; ") {
 		let mut iter = pair.splitn(2, '=');
@@ -107,5 +106,7 @@ pub fn get_post() -> Option<HashMap<String, String>> {
 
 /// Converts data from a POST or GET request into a key/value map
 fn request_decode(data: Vec<u8>) -> HashMap<String, String> {
-	form_urlencoded::parse(data.as_slice()).into_owned().collect::<HashMap<String, String>>()
+	form_urlencoded::parse(data.as_slice())
+		.into_owned()
+		.collect::<HashMap<String, String>>()
 }

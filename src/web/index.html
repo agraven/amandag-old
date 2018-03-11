@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html prefix="og: http://ogp.me/ns#">
 <head>
 	<title>{title}</title>
 	<meta name="author" content="Amanda Graven">
-	<meta name="description" content="Personal homepage of Amanda Graven">
+	<meta name="og:title" content="{title}">
+	<meta name="og:site_name" content="Amanda's terrible homepage">
+	<meta name="twitter:title" content="{title}">
 
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,7 +21,7 @@
 				<li><a href="/about">About</a></li>
 			</ul>
 			<div id="login">
-				<span id="user">Welcome, guest</span>
+				<span id="user">Welcome, {user}</span>
 				<ul class="navbar">
 					<li><a>Log in</a></li>
 					<li><a>Sign up</a></li>

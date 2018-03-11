@@ -1,132 +1,168 @@
 use crypto::bcrypt::bcrypt;
-use crypto::hmac::Hmac;
-use crypto::mac::{Mac, MacResult};
-use crypto::sha2::Sha512;
 use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use mysql;
 use rand::{self, Rng};
+use std::fs::File;
+use std::io::Read;
 use time;
 use time::{Duration, Timespec};
-use mysql;
+
+use cgi;
 
 const SALT_LENGTH: usize = 16;
-const TOKEN_LENGTH: usize = 64;
+const SESSID_LENGTH: usize = 64;
 
 const ADDRESS: &'static str = "mysql://readonly:1234@localhost/amandag";
-const INSERT_TOKEN: &'static str = "INSERT INTO tokens (token, hash, user, expires) VALUES (?, ?, ?)";
-const INSERT_USER: &'static str = "INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
-const DELETE_TOKEN: &'static str = "DELETE FROM tokens WHERE token = ?";
-const SELECT_TOKEN: &'static str = "SELECT token, expiry FROM tokens WHERE hash = ?";
+const INSERT_SESSION: &'static str =
+	"INSERT INTO sessions (id, user, expiry) VALUES (?, ?, ?)";
+const INSERT_USER: &'static str =
+	"INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
+const DELETE_SESSION: &'static str = "DELETE FROM sessions WHERE id = ?";
+const SELECT_SESSION: &'static str =
+	"SELECT id, user, expiry FROM sessions WHERE id = ?";
 const SELECT_USER: &'static str = "SELECT pass, salt FROM users WHERE id = ?";
 
 error_chain! {
-    foreign_links {
-        Sql(mysql::Error);
-        Utf8(::std::string::FromUtf8Error);
-    }
-    errors {
-        ExpiredToken {
-            description("token has expired"),
-            display("Token has expired"),
-        }
-        InvalidToken {
-            description("token is invalid"),
-            display("Invalid login token"),
-        }
-        NoSuchToken {
-            description("no such token"),
-            display("Attemped to login with nonexistant token"),
-        }
-        NoSuchUser(s: String) {
-            description("no such user"),
-            display("The user {} doesn't exist", s),
-        }
-        WrongPassword {
-            description("wrong password"),
-            display("Wrong password"),
-        }
-    }
+	foreign_links {
+		Sql(mysql::Error);
+		Utf8(::std::string::FromUtf8Error);
+        Io(::std::io::Error);
+	}
+	links {
+		Cgi(cgi::Error, cgi::ErrorKind);
+	}
+	errors {
+		ExpiredToken {
+			description("token has expired"),
+			display("Token has expired"),
+		}
+		InvalidToken {
+			description("token is invalid"),
+			display("Invalid login token"),
+		}
+		NoSuchToken {
+			description("no such token"),
+			display("Attemped to login with nonexistant token"),
+		}
+		NoSuchUser(s: String) {
+			description("no such user"),
+			display("The user {} doesn't exist", s),
+		}
+		WrongPassword {
+			description("wrong password"),
+			display("Wrong password"),
+		}
+	}
 }
 
 pub struct User {
-    pub id: String,
-    pub pass: String,
+	pub id: String,
+	pub pass: String,
 }
 
-pub struct Token {
-    pub hash: String,
-    pub user: String,
-    pub expiry: Timespec,
+pub struct Session {
+	pub id: String,
+	pub user: String,
+	pub expiry: Timespec,
 }
 
 fn rand_str(len: usize) -> String {
-    rand::thread_rng().gen_ascii_chars().take(len).collect()
+	rand::thread_rng()
+		.gen_ascii_chars()
+		.take(len)
+		.collect()
 }
 
 fn hash(key: &str, salt: &str) -> String {
-    // Hash password to mitigate DoS
-    let hex = {
-        let mut digest = Sha512::new();
-        digest.input_str(key);
-        digest.result_str()
-    };
-    // Salt
-    let mut output = [0u8; 24];
-    bcrypt(12, salt.as_bytes(), hex.as_bytes(), &mut output);
-    // TODO: encrypt with pepper
-    String::from_utf8_lossy(&output).to_string()
+	// Hash password to mitigate DoS
+	let hex = {
+		let mut digest = Sha256::new();
+		digest.input_str(&key);
+		digest.result_str()
+	};
+	// Salt
+	let mut output = [0u8; 24];
+	bcrypt(12, salt.as_bytes(), hex.as_bytes(), &mut output);
+	// TODO: encrypt with pepper
+	String::from_utf8_lossy(&output).to_string()
 }
 
-fn hmac(key: &str, msg: &str) -> MacResult {
-    let mut mac = Hmac::new(Sha512::new(), key.as_bytes());
-    mac.input(msg.as_bytes());
-    mac.result()
-}
-
-fn verify_hmac(result: MacResult, hash: &str) -> bool {
-    result == MacResult::new_from_owned(hash.to_owned().into_bytes())
-}
-
-/// Verify a login token
-pub fn auth(user: &str, hash: &str) -> Result<Token> {
-    let pool = mysql::Pool::new(ADDRESS)?;
-    if let Some(row) = pool.first_exec(SELECT_TOKEN, (hash,))? {
-        let (token, expiry): (String, Timespec) = mysql::from_row(row);
-        if !verify_hmac(hmac(&token, user), hash) {
-            return Err(ErrorKind::InvalidToken.into());
-        } else if expiry < time::get_time() {
-            pool.first_exec(DELETE_TOKEN, (token,))?;
-            Err(ErrorKind::ExpiredToken.into())
-        } else {
-            return Ok(Token {hash: hash.to_owned(), user: user.to_owned(), expiry});
-        }
-    } else {
-        Err(ErrorKind::NoSuchToken.into())
-    }
+/// Verify a login session
+pub fn auth(sessid: &str) -> Result<Session> {
+	let pool = mysql::Pool::new(ADDRESS)?;
+	if let Some(row) = pool.first_exec(SELECT_SESSION, (sessid,))? {
+		let (id, user, expiry): (String, String, Timespec) =
+			mysql::from_row(row);
+		if expiry < time::get_time() {
+			pool.first_exec(DELETE_SESSION, (sessid,))?;
+			Err(ErrorKind::ExpiredToken.into())
+		} else {
+			return Ok(Session {
+				id: id.to_owned(),
+				user: user.to_owned(),
+				expiry,
+			});
+		}
+	} else {
+		Err(ErrorKind::NoSuchToken.into())
+	}
 }
 
 /// Sign in user with password, creating a login token
-pub fn login(user: &str, password: &str) -> Result<Token> {
-    let pool = mysql::Pool::new(ADDRESS)?;
-    if let Some(row) = pool.first_exec(SELECT_USER, (user,))? {
-        let (pass, salt): (String, String) = mysql::from_row(row);
-        if hash(password, &salt) == pass {
-            // Correct password, create token
-            let token = rand_str(TOKEN_LENGTH);
-            let hash = String::from_utf8(hmac(&token, user).code().to_owned())?;
-            let expiry = time::get_time() + Duration::days(30);
-            pool.prep_exec(INSERT_TOKEN, (&token, &user, expiry))?;
-            Ok(Token {hash, user: user.to_owned(), expiry})
-        } else {
-            Err(ErrorKind::WrongPassword.into())
-        }
-    } else {
-        Err(ErrorKind::NoSuchUser(user.to_owned()).into())
-    }
+pub fn login(user: &str, password: &str) -> Result<Session> {
+	let dbpassword = String::from_utf8(
+		File::open("secret/db-submit")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect(),
+	)?;
+	let pool = mysql::Pool::new(format!("mysql://submit:{}@localhost/amandag", dbpassword))?;
+	if let Some(row) = pool.first_exec(SELECT_USER, (user,))? {
+		let (pass, salt): (String, String) = mysql::from_row(row);
+		if hash(&password, &salt) == pass {
+			// Correct password, create token
+			let id = rand_str(SESSID_LENGTH);
+			let expiry = time::get_time() + Duration::days(30);
+			pool.prep_exec(INSERT_SESSION, (&id, &user, expiry))?;
+			Ok(Session {
+				id,
+				user: user.to_owned(),
+				expiry,
+			})
+		} else {
+			Err(ErrorKind::WrongPassword.into())
+		}
+	} else {
+		Err(ErrorKind::NoSuchUser(user.to_owned()).into())
+	}
 }
 
 pub fn create(user: &str, password: &str, name: &str) -> Result<()> {
-    let pool = mysql::Pool::new(ADDRESS)?;
-    let salt = rand_str(SALT_LENGTH);
-    pool.prep_exec(INSERT_USER, (user, password, salt, name))?;
-    Ok(())
+	let dbpassword = String::from_utf8(
+		File::open("secret/db-submit")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect(),
+	)?;
+	let pool = mysql::Pool::new(format!("mysql://submit:{}@localhost/amandag", dbpassword))?;
+	let salt = rand_str(SALT_LENGTH);
+	pool.prep_exec(
+		INSERT_USER,
+		(user, hash(&password, &salt), salt, name),
+	)?;
+	Ok(())
+}
+
+pub fn get_session() -> Result<Session> {
+	let cookies = cgi::get_cookies()?;
+	if let Some(id) = cookies.get("session") {
+		auth(&id)
+	} else {
+		Ok(Session {
+			id: String::new(),
+			user: String::from("guest"),
+			expiry: time::get_time(),
+		})
+	}
 }

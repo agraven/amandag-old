@@ -28,12 +28,14 @@ impl Article {
 			format!("Submitted {}", time::at(self.post_time).ctime())
 		};
 		// Print article
-		format!(include_str!("web/article.html"),
+		format!(
+			include_str!("web/article.html"),
 			id = self.id,
 			title = self.title,
 			time = time_string,
 			category = self.category,
 			content = self.content.render_html(),
-			count = self.comment_count)
+			count = self.comment_count
+		)
 	}
 }

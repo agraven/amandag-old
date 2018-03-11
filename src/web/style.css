@@ -142,6 +142,10 @@ div.comment h3 {
 	margin: 0;
 	margin-bottom: 0.1em;
 }
+div.comment span.uid {
+	font-size: smaller;
+	font-style: italic;
+}
 div.comment div.time {
 	color: #BBB;
 	font-size: 80%;
