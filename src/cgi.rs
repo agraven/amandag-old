@@ -20,7 +20,6 @@ error_chain! {
 		}
 	}
 }
-use self::ErrorKind::CookiesUndefined;
 
 pub trait Encode {
 	/// Replace html characters with their escape codes
@@ -52,11 +51,9 @@ impl Encode for String {
 /// Returns a map of set cookies by parsing the HTTP_COOKIE environment
 /// variable. The function is not protected from special characters
 pub fn get_cookies() -> Result<HashMap<String, String>> {
-	let cookies = env::var_os("HTTP_COOKIE")
-		.ok_or::<Error>(CookiesUndefined.into())?
-		.into_string()
-		.ok()
-		.ok_or::<Error>(ErrorKind::OsString.into())?;
+	let cookies_raw = env::var_os("HTTP_COOKIE")
+        .unwrap_or(::std::ffi::OsString::new());
+    let cookies = cookies_raw.to_string_lossy().to_owned();
 	let mut map = HashMap::new();
 	for pair in cookies.split("; ") {
 		let mut iter = pair.splitn(2, '=');

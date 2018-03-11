@@ -54,7 +54,7 @@ fn run() -> Result<()> {
 		let session = auth::login(&user, &pass)?;
 
 		println!(
-			"{}{}\n",
+			"{}\n{}\n\n",
 			include_str!("../web/http-headers"),
 			format!(
 				"Set-Cookie: session={}; Secure; SameSite=Strict",

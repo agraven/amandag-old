@@ -3,6 +3,8 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use mysql;
 use rand::{self, Rng};
+use std::fs::File;
+use std::io::Read;
 use time;
 use time::{Duration, Timespec};
 
@@ -18,13 +20,14 @@ const INSERT_USER: &'static str =
 	"INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
 const DELETE_SESSION: &'static str = "DELETE FROM sessions WHERE id = ?";
 const SELECT_SESSION: &'static str =
-	"SELECT id, user, expiry FROM tokens WHERE hash = ?";
+	"SELECT id, user, expiry FROM sessions WHERE id = ?";
 const SELECT_USER: &'static str = "SELECT pass, salt FROM users WHERE id = ?";
 
 error_chain! {
 	foreign_links {
 		Sql(mysql::Error);
 		Utf8(::std::string::FromUtf8Error);
+        Io(::std::io::Error);
 	}
 	links {
 		Cgi(cgi::Error, cgi::ErrorKind);
@@ -108,7 +111,13 @@ pub fn auth(sessid: &str) -> Result<Session> {
 
 /// Sign in user with password, creating a login token
 pub fn login(user: &str, password: &str) -> Result<Session> {
-	let pool = mysql::Pool::new(ADDRESS)?;
+	let dbpassword = String::from_utf8(
+		File::open("secret/db-submit")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect(),
+	)?;
+	let pool = mysql::Pool::new(format!("mysql://submit:{}@localhost/amandag", dbpassword))?;
 	if let Some(row) = pool.first_exec(SELECT_USER, (user,))? {
 		let (pass, salt): (String, String) = mysql::from_row(row);
 		if hash(&password, &salt) == pass {
@@ -130,7 +139,13 @@ pub fn login(user: &str, password: &str) -> Result<Session> {
 }
 
 pub fn create(user: &str, password: &str, name: &str) -> Result<()> {
-	let pool = mysql::Pool::new(ADDRESS)?;
+	let dbpassword = String::from_utf8(
+		File::open("secret/db-submit")?
+			.bytes()
+			.map(|b| b.unwrap())
+			.collect(),
+	)?;
+	let pool = mysql::Pool::new(format!("mysql://submit:{}@localhost/amandag", dbpassword))?;
 	let salt = rand_str(SALT_LENGTH);
 	pool.prep_exec(
 		INSERT_USER,

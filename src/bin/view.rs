@@ -44,7 +44,9 @@ fn main() {
 	}
 }
 
-const SELECT_POST: &'static str = "SELECT id, title, content, post_time, edit_time, category FROM posts WHERE id = ?";
+const SELECT_POST: &'static str =
+	"SELECT id, title, content, post_time, edit_time, category \
+	 FROM posts WHERE id = ?";
 fn run() -> Result<()> {
 	// Get map of GET request and get id
 	let id: i64 = cgi::get_get_member(String::from("id"))

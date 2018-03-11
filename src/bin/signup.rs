@@ -4,6 +4,8 @@ extern crate error_chain;
 
 use amandag::{auth, cgi};
 
+const RESERVED: &[&str] = &["guest", "admin"];
+
 error_chain! {
 	links {
 		Auth(auth::Error, auth::ErrorKind);
@@ -18,6 +20,10 @@ error_chain! {
 			description("Missing POST value"),
 			display("Missing parameter: {}", param),
 		}
+        Reserved(name: String) {
+            description("This is not a permitted username"),
+            display("{} is a reserved username", name),
+        }
 	}
 }
 
@@ -62,6 +68,10 @@ fn result() -> Result<()> {
 			.ok_or(ErrorKind::Undefined(key).into())
 	};
 	let user = get("user")?;
+    // Check if username is reserved
+    if RESERVED.contains(&user.as_str()) {
+        return Err(ErrorKind::Reserved(user.to_owned()).into())
+    }
 	let pass = get("password")?;
 	let name = get("name")?;
 
@@ -69,7 +79,7 @@ fn result() -> Result<()> {
 
 	let session = auth::login(&user, &pass)?;
 	println!(
-		"{}{}\n\n",
+		"{}\n{}\n\n",
 		format!(
 			"Set-Cookie: token={}; Secure; SameSite=Strict",
 			session.id,

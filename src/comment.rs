@@ -50,7 +50,9 @@ impl Comment {
 }
 
 impl CommentList for Vec<Comment> {
-	fn display(&self) -> String { self.display_from_root(-1) }
+	fn display(&self) -> String {
+        self.display_from_root(-1)
+    }
 	fn display_from_root(&self, root: i64) -> String {
 		let mut string = String::new();
 		// Return a new string to stop recursion if no children found
@@ -68,7 +70,7 @@ impl CommentList for Vec<Comment> {
 				form = "this.parentElement.parentElement.nextElementSibling",
 				id = comment.id,
 				time = time::at(comment.post_time).ctime(),
-				children = self.display_from_root(comment.id as i64)
+				children = self.display_from_root(comment.id as i64),
 			));
 		}
 		string

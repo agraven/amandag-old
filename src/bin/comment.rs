@@ -3,6 +3,7 @@ extern crate amandag;
 extern crate error_chain;
 
 use amandag::Comment;
+use amandag::auth;
 use amandag::captcha;
 use amandag::cgi;
 use amandag::mysql;
@@ -14,6 +15,7 @@ use std::io::Read;
 error_chain! {
 	links {
 		Captcha(captcha::Error, captcha::ErrorKind);
+        Auth(auth::Error, auth::ErrorKind);
 	}
 	foreign_links {
 		Io(std::io::Error);
@@ -40,6 +42,7 @@ fn main() {
 }
 
 fn run() -> Result<()> {
+    let session = auth::get_session()?;
 	if !cgi::request_method_is("POST") {
 		return Err(ErrorKind::Method.into());
 	}
@@ -51,10 +54,6 @@ fn run() -> Result<()> {
 			.ok_or(ErrorKind::MissingParam(key).into())
 	};
 	let author = get("name")?.clone();
-	let user = post_map
-		.get("user")
-		.unwrap_or(&String::from("guest"))
-		.clone();
 	let content = get("content")?.clone();
 	let post_id = get("id")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
@@ -98,9 +97,9 @@ fn run() -> Result<()> {
 			.unwrap(),
 	);
 	pool.prep_exec(
-		"INSERT INTO comments (id, author, content, post_id, parent_id) \
-		 VALUES (?, ?, ?, ?, ?)",
-		(id, &author, &content, post_id, parent_id),
+		"INSERT INTO comments (id, user, author, content, post_id, parent_id) \
+		 VALUES (?, ?, ?, ?, ?, ?)",
+		(id, &session.user, &author, &content, post_id, parent_id),
 	)?;
 	let post_time = time::get_time();
 
@@ -109,7 +108,7 @@ fn run() -> Result<()> {
 		Comment {
 			id,
 			author,
-			user,
+			user: session.user,
 			content,
 			post_time,
 			parent_id,

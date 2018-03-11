@@ -6,7 +6,7 @@ var captchaLoad = function() {
 }
 function setHeight(elem) {
 	elem.style.height = '1px';
-	elem.style.height = elem.scrollHeight + 'px';
+	elem.style.height = elem.scrollHeight + 5 + 'px';
 }
 function show(element) {
 	element.style.display = "block";
