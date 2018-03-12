@@ -32,12 +32,9 @@ fn main() {
 		println!("{}\n", include_str!("../web/http-headers"));
 		println!(
 			include_str!("../web/index.html"),
-			content = format!(
-				"<article><h1>Error</h1>{}</article>",
-				e.to_string()
-			),
+			content = format!("<article><h1>Error</h1>{}</article>", e.to_string()),
 			head = "",
-			user = "",
+			userinfo = "",
 			title = "Error"
 		);
 	}
@@ -55,7 +52,7 @@ fn run() -> Result<()> {
 			title = "Sign up",
 			content = include_str!("../web/signup.html"),
 			head = "",
-			user = session.user,
+			userinfo = cgi::print_user_info(&session.user),
 		);
 		Ok(())
 	}
@@ -64,14 +61,13 @@ fn run() -> Result<()> {
 fn result() -> Result<()> {
 	let post = cgi::get_post().ok_or(ErrorKind::Post)?;
 	let get = |key: &'static str| -> Result<&String> {
-		post.get(key)
-			.ok_or(ErrorKind::Undefined(key).into())
+		post.get(key).ok_or(ErrorKind::Undefined(key).into())
 	};
 	let user = get("user")?;
-    // Check if username is reserved
-    if RESERVED.contains(&user.as_str()) {
-        return Err(ErrorKind::Reserved(user.to_owned()).into())
-    }
+	// Check if username is reserved
+	if RESERVED.contains(&user.as_str()) {
+		return Err(ErrorKind::Reserved(user.to_owned()).into());
+	}
 	let pass = get("password")?;
 	let name = get("name")?;
 
@@ -90,7 +86,7 @@ fn result() -> Result<()> {
 		include_str!("../web/index.html"),
 		title = "Signup successful",
 		head = "",
-		user = session.user,
+		userinfo = cgi::print_user_info(&session.user),
 		content = format!(
 			"<article><h1>Signup successful</h1>Successfully created user {}",
 			user

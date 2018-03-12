@@ -5,10 +5,16 @@ extern crate error_chain;
 use std::fs::File;
 use std::io::Read;
 
+use amandag::article::Article;
 use amandag::auth;
 use amandag::captcha;
 use amandag::cgi;
+use amandag::cgi::Encode;
 use amandag::mysql;
+use amandag::time;
+
+const SELECT_POST: &'static str = "SELECT id, title, content, post_time, edit_time, category \
+	 FROM posts WHERE id = ?";
 
 // Error definitions
 error_chain! {
@@ -17,6 +23,7 @@ error_chain! {
 		Io(std::io::Error);
 		Sql(mysql::Error);
 		Utf8(std::string::FromUtf8Error);
+        ParseInt(std::num::ParseIntError);
 	}
 	links {
 		Auth(auth::Error, auth::ErrorKind);
@@ -31,6 +38,10 @@ error_chain! {
 			description("User does not have permission to submit articles"),
 			display("You do not have permission to submit articles"),
 		}
+		InvalidId(id: u64) {
+			description("invalid article id"),
+			display("Invalid article id: {}", id),
+		}
 	}
 }
 use ErrorKind::Param;
@@ -42,7 +53,7 @@ fn main() {
 			include_str!("../web/index.html"),
 			title = "Error",
 			head = "",
-			user = "",
+			userinfo = "",
 			content = format!(
 				"<article><h1>Internal server error</h1>\
 				 The page could not be displayed because of an internal \
@@ -73,16 +84,6 @@ fn run() -> Result<()> {
 		let title = get("title")?;
 		let content = get("content")?;
 		let category = get("category")?;
-		let response = get("g-recaptcha-response")?;
-		let secret = String::from_utf8(
-			File::open("secret/submit-captcha")?
-				.bytes()
-				.map(|b| b.unwrap())
-				.collect(),
-		)?;
-
-		// Verify captcha
-		captcha::verify(&secret, &response)?;
 
 		// Check user permissions
 		if session.user != "amanda" {
@@ -90,34 +91,88 @@ fn run() -> Result<()> {
 		}
 
 		// Insert article into database
-		let url = format!(
-			"mysql://submit:{}@localhost:3306/amandag",
-			password
-		);
-		mysql::Pool::new(url)?.prep_exec(
-			"INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
-			(title, content, category),
-		)?;
+		let url = format!("mysql://submit:{}@localhost:3306/amandag", password);
+		let pool = mysql::Pool::new(url)?;
+		if let Some(id) = cgi::get_get_member("id") {
+			let id = id.parse::<u64>()?;
+			pool.prep_exec(
+                "UPDATE posts SET title = ?, content = ?, category = ?, edit_time = ? WHERE id = ?",
+                (title, content, category, time::get_time(), id),
+            )?;
+		} else {
+			pool.prep_exec(
+                "INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
+                (title, content, category),
+            )?;
+		}
 
+		println!("{}\n", include_str!("../web/http-headers"));
 		println!(
 			include_str!("../web/index.html"),
 			title = "Article submitted",
 			head = "",
-			user = session.user,
+			userinfo = cgi::print_user_info(&session.user),
 			content = "<article>Article submitted.</article>"
 		);
 
 		return Ok(());
 	}
-	// Print submission form
-	println!("{}\n", include_str!("../web/http-headers"));
-	println!(
-		include_str!("../web/index.html"),
-		title = "Amanda Graven's homepage - Submit article",
-		head = "",
-		user = session.user,
-		content = include_str!("../web/submit.html")
-	);
+
+	// Edit post
+	if let Some(id) = cgi::get_get_member("id") {
+		let id = id.parse::<u64>()?;
+		let article = {
+			let pool = mysql::Pool::new(
+				"mysql://readonly:1234@localhost:3306/amandag",
+			)?;
+			let row = pool.first_exec(SELECT_POST, (id,))?.ok_or(
+				ErrorKind::InvalidId(id as u64),
+			)?;
+			// Bind values from row
+			let (id, title, content, post_time, edit_time, category) =
+				mysql::from_row(row);
+			Article {
+				id,
+				title,
+				content,
+				post_time,
+				edit_time,
+				category,
+				comment_count: 0,
+			}
+		};
+		println!("{}\n", include_str!("../web/http-headers"));
+		println!(
+            include_str!("../web/index.html"),
+            title = format!("Edit article: {}", article.title),
+            head = "",
+            userinfo = cgi::print_user_info(&session.user),
+            content = format!(
+                include_str!("../web/submit.html"),
+                id = article.id,
+                content = article.content.encode_html(),
+                title = article.title.encode_html(),
+                category = article.category.encode_html(),
+            ),
+        )
+	} else {
+		// Print submission form
+		println!("{}\n", include_str!("../web/http-headers"));
+		println!(
+			include_str!("../web/index.html"),
+			title = "Amanda Graven's homepage - Submit article",
+			head = "",
+			userinfo = cgi::print_user_info(&session.user),
+			content =
+				format!(
+                include_str!("../web/submit.html"),
+                id = "",
+                content = "",
+                title = "",
+                category = "",
+            )
+		);
+	}
 
 	Ok(())
 }

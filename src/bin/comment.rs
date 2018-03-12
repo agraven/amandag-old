@@ -42,16 +42,14 @@ fn main() {
 }
 
 fn run() -> Result<()> {
-    let session = auth::get_session()?;
+	let session = auth::get_session()?;
 	if !cgi::request_method_is("POST") {
 		return Err(ErrorKind::Method.into());
 	}
 	let post_map = cgi::get_post().unwrap();
 	// Get values
 	let get = |key: &'static str| -> Result<&String> {
-		post_map
-			.get(key)
-			.ok_or(ErrorKind::MissingParam(key).into())
+		post_map.get(key).ok_or(ErrorKind::MissingParam(key).into())
 	};
 	let author = get("name")?.clone();
 	let content = get("content")?.clone();
@@ -74,10 +72,7 @@ fn run() -> Result<()> {
 			.collect(),
 	)?;
 
-	let options = format!(
-		"mysql://root:{}@localhost:3306/amandag",
-		password
-	);
+	let options = format!("mysql://root:{}@localhost:3306/amandag", password);
 	let pool = mysql::Pool::new(options)?;
 	// Get a unique id
 	let id: u64 = mysql::from_row(

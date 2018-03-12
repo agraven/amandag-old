@@ -1,6 +1,6 @@
 [package]
 name = "amandag"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Amanda P. Graven <amanda@amandag.net>"]
 homepage = "https://amandag.net"
 repository = "https://github.com/agraven/amandag"

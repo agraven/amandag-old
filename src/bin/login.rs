@@ -29,12 +29,9 @@ fn main() {
 		println!("{}\n", include_str!("../web/http-headers"));
 		println!(
 			include_str!("../web/index.html"),
-			content = format!(
-				"<article><h1>Error</h1>{}</article>",
-				e.to_string()
-			),
+			content = format!("<article><h1>Error</h1>{}</article>", e.to_string()),
 			head = "",
-			user = "",
+			userinfo = "",
 			title = "Error"
 		);
 	}
@@ -45,8 +42,7 @@ fn run() -> Result<()> {
 	if cgi::request_method_is("POST") {
 		let post = cgi::get_post().ok_or(ErrorKind::Post)?;
 		let get = |key: &'static str| -> Result<&String> {
-			post.get(key)
-				.ok_or(ErrorKind::Undefined(key).into())
+			post.get(key).ok_or(ErrorKind::Undefined(key).into())
 		};
 		let user = get("user")?;
 		let pass = get("password")?;
@@ -65,7 +61,7 @@ fn run() -> Result<()> {
 			include_str!("../web/index.html"),
 			title = "Login successful",
 			head = "",
-			user = user,
+			userinfo = cgi::print_user_info(&user),
 			content = format!(
 				"<article><h1>Login successful</h1>Successfully logged in as {}",
 				user
@@ -79,7 +75,7 @@ fn run() -> Result<()> {
 			include_str!("../web/index.html"),
 			title = "Login successful",
 			head = "",
-			user = session.user,
+			userinfo = cgi::print_user_info(&session.user),
 			content = "<article><h1>Already logged in</h1> \
 			           To sign in as another user, you have to log out first.</article>",
 		);
@@ -89,7 +85,7 @@ fn run() -> Result<()> {
 			include_str!("../web/index.html"),
 			title = "Login",
 			content = include_str!("../web/login.html"),
-			user = session.user,
+			userinfo = cgi::print_user_info(&session.user),
 			head = ""
 		);
 	}

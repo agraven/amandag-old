@@ -1,11 +1,10 @@
-		<form action="submit.cgi" method="post">
+		<form action="/submit/{id}" method="post">
 			<h1>Submit post</h1>
 			<p>
-				<input type="text" name="title" placeholder="Title">
-				<input type="text" name="category" placeholder="Category">
+				<input type="text" name="title" placeholder="Title" value="{title}">
+				<input type="text" name="category" placeholder="Category" value="{category}">
 			<p>
-			<textarea rows="1" cols="1" name="content"></textarea>
-			<div class="g-recaptcha" data-sitekey="6LdO2SoUAAAAAPOph0HIJ7mUUEnDsG_mfS0AHL1L"></div>
+			<textarea rows="1" cols="1" name="content">{content}</textarea>
 			<p class="button-list">
 				<input id="submit" type="submit" value="Submit"/>
 			</p>

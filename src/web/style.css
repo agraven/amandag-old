@@ -139,8 +139,10 @@ div.comment div.comment {
 	margin-right: 10px;
 }
 div.comment h3 {
+	display: inline-block;
 	margin: 0;
 	margin-bottom: 0.1em;
+	margin-right: 5px;
 }
 div.comment span.uid {
 	font-size: smaller;

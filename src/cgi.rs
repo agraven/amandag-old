@@ -40,10 +40,7 @@ impl Encode for String {
 	fn render_markdown(&self) -> String {
 		let markdown = Markdown::new(&self.encode_html());
 		let mut html = Html::new(html::Flags::empty(), 0);
-		html.render(&markdown)
-			.to_str()
-			.unwrap()
-			.to_string()
+		html.render(&markdown).to_str().unwrap().to_string()
 	}
 	fn render_html(&self) -> String { self.render_markdown() }
 }
@@ -51,9 +48,10 @@ impl Encode for String {
 /// Returns a map of set cookies by parsing the HTTP_COOKIE environment
 /// variable. The function is not protected from special characters
 pub fn get_cookies() -> Result<HashMap<String, String>> {
-	let cookies_raw = env::var_os("HTTP_COOKIE")
-        .unwrap_or(::std::ffi::OsString::new());
-    let cookies = cookies_raw.to_string_lossy().to_owned();
+	let cookies_raw = env::var_os("HTTP_COOKIE").unwrap_or(
+		::std::ffi::OsString::new(),
+	);
+	let cookies = cookies_raw.to_string_lossy().to_owned();
 	let mut map = HashMap::new();
 	for pair in cookies.split("; ") {
 		let mut iter = pair.splitn(2, '=');
@@ -82,9 +80,9 @@ pub fn request_method_is(method: &str) -> bool {
 }
 
 /// Gets a value from a GET request
-pub fn get_get_member(name: String) -> Option<String> {
+pub fn get_get_member(name: &str) -> Option<String> {
 	if let Some(get_map) = get_get() {
-		if let Some(value) = get_map.get(name.as_str()) {
+		if let Some(value) = get_map.get(name) {
 			Some(value.clone())
 		} else {
 			None
@@ -101,6 +99,14 @@ pub fn get_post() -> Option<HashMap<String, String>> {
 		Some(request_decode(post))
 	} else {
 		None
+	}
+}
+
+pub fn print_user_info(user: &str) -> String {
+	if user == "guest" {
+		include_str!("web/guest-info.html").to_owned()
+	} else {
+		format!(include_str!("web/user-info.html"), user = user)
 	}
 }
 
