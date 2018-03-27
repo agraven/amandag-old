@@ -124,6 +124,11 @@ footer {
 	font-style: italic;
 	font-family: sans;
 }
+footer.notice {
+	background: #345;
+	padding: 12px;
+	margin-top: 12px;
+}
 
 /* Comment styling */
 div.comment {

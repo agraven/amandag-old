@@ -13,7 +13,8 @@ use amandag::cgi::Encode;
 use amandag::mysql;
 use amandag::time;
 
-const SELECT_POST: &'static str = "SELECT id, title, content, post_time, edit_time, category \
+const SELECT_POST: &'static str =
+	"SELECT id, title, content, post_time, edit_time, category \
 	 FROM posts WHERE id = ?";
 
 // Error definitions
@@ -23,7 +24,7 @@ error_chain! {
 		Io(std::io::Error);
 		Sql(mysql::Error);
 		Utf8(std::string::FromUtf8Error);
-        ParseInt(std::num::ParseIntError);
+		ParseInt(std::num::ParseIntError);
 	}
 	links {
 		Auth(auth::Error, auth::ErrorKind);
@@ -91,7 +92,10 @@ fn run() -> Result<()> {
 		}
 
 		// Insert article into database
-		let url = format!("mysql://submit:{}@localhost:3306/amandag", password);
+		let url = format!(
+			"mysql://submit:{}@localhost:3306/amandag",
+			password
+		);
 		let pool = mysql::Pool::new(url)?;
 		if let Some(id) = cgi::get_get_member("id") {
 			let id = id.parse::<u64>()?;
@@ -101,9 +105,9 @@ fn run() -> Result<()> {
             )?;
 		} else {
 			pool.prep_exec(
-                "INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
-                (title, content, category),
-            )?;
+				"INSERT INTO posts (title, content, category) VALUES (?, ?, ?)",
+				(title, content, category),
+			)?;
 		}
 
 		println!("{}\n", include_str!("../web/http-headers"));
@@ -125,9 +129,8 @@ fn run() -> Result<()> {
 			let pool = mysql::Pool::new(
 				"mysql://readonly:1234@localhost:3306/amandag",
 			)?;
-			let row = pool.first_exec(SELECT_POST, (id,))?.ok_or(
-				ErrorKind::InvalidId(id as u64),
-			)?;
+			let row = pool.first_exec(SELECT_POST, (id,))?
+				.ok_or(ErrorKind::InvalidId(id as u64))?;
 			// Bind values from row
 			let (id, title, content, post_time, edit_time, category) =
 				mysql::from_row(row);
@@ -143,18 +146,18 @@ fn run() -> Result<()> {
 		};
 		println!("{}\n", include_str!("../web/http-headers"));
 		println!(
-            include_str!("../web/index.html"),
-            title = format!("Edit article: {}", article.title),
-            head = "",
-            userinfo = cgi::print_user_info(&session.user),
-            content = format!(
-                include_str!("../web/submit.html"),
-                id = article.id,
-                content = article.content.encode_html(),
-                title = article.title.encode_html(),
-                category = article.category.encode_html(),
-            ),
-        )
+			include_str!("../web/index.html"),
+			title = format!("Edit article: {}", article.title),
+			head = "",
+			userinfo = cgi::print_user_info(&session.user),
+			content = format!(
+				include_str!("../web/submit.html"),
+				id = article.id,
+				content = article.content.encode_html(),
+				title = article.title.encode_html(),
+				category = article.category.encode_html(),
+			),
+		)
 	} else {
 		// Print submission form
 		println!("{}\n", include_str!("../web/http-headers"));
@@ -163,14 +166,13 @@ fn run() -> Result<()> {
 			title = "Amanda Graven's homepage - Submit article",
 			head = "",
 			userinfo = cgi::print_user_info(&session.user),
-			content =
-				format!(
-                include_str!("../web/submit.html"),
-                id = "",
-                content = "",
-                title = "",
-                category = "",
-            )
+			content = format!(
+				include_str!("../web/submit.html"),
+				id = "",
+				content = "",
+				title = "",
+				category = "",
+			)
 		);
 	}
 

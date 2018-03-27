@@ -40,7 +40,10 @@ impl Encode for String {
 	fn render_markdown(&self) -> String {
 		let markdown = Markdown::new(&self.encode_html());
 		let mut html = Html::new(html::Flags::empty(), 0);
-		html.render(&markdown).to_str().unwrap().to_string()
+		html.render(&markdown)
+			.to_str()
+			.unwrap()
+			.to_string()
 	}
 	fn render_html(&self) -> String { self.render_markdown() }
 }
@@ -48,9 +51,8 @@ impl Encode for String {
 /// Returns a map of set cookies by parsing the HTTP_COOKIE environment
 /// variable. The function is not protected from special characters
 pub fn get_cookies() -> Result<HashMap<String, String>> {
-	let cookies_raw = env::var_os("HTTP_COOKIE").unwrap_or(
-		::std::ffi::OsString::new(),
-	);
+	let cookies_raw =
+		env::var_os("HTTP_COOKIE").unwrap_or(::std::ffi::OsString::new());
 	let cookies = cookies_raw.to_string_lossy().to_owned();
 	let mut map = HashMap::new();
 	for pair in cookies.split("; ") {

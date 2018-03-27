@@ -50,11 +50,13 @@ pub fn verify(secret: &str, response: &str) -> Result<()> {
 		"https://www.google.com/recaptcha/api/siteverify".parse()?,
 	);
 	let query = format!("secret={}&response={}", secret, response);
-	request.headers_mut().set(ContentType(
-		APPLICATION_WWW_FORM_URLENCODED,
-	));
+	request
+		.headers_mut()
+		.set(ContentType(APPLICATION_WWW_FORM_URLENCODED));
 	request.set_body(query);
-	let work = client.request(request).and_then(|res| res.body().concat2());
+	let work = client
+		.request(request)
+		.and_then(|res| res.body().concat2());
 	// Fetch response
 	let body = String::from_utf8(core.run(work)?.to_vec())?;
 	// Deserialize response

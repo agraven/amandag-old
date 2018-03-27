@@ -1,5 +1,6 @@
-* L10N support
-* Authentication system
-* Article editing/deletion
+* Give articles "visible" tag
+* Permissions system
 * Prettier styling
+* L10N support
+* Add session granting tokens
 * Consider adding pepper encryption to password hashes

@@ -15,8 +15,8 @@ pub struct Comment {
 }
 
 pub trait CommentList {
-	fn display(&self) -> String;
-	fn display_from_root(&self, root: i64) -> String;
+	fn display(&self, guest: bool) -> String;
+	fn display_from_root(&self, root: i64, guest: bool) -> String;
 	fn with_parent_id(&self, parent_id: i64) -> Vec<Comment>;
 }
 fn color_name(id: u64) -> String {
@@ -33,7 +33,7 @@ fn color_name(id: u64) -> String {
 }
 
 impl Comment {
-	pub fn display(&self) -> String {
+	pub fn display(&self, guest: bool) -> String {
 		// format
 		format!(
 			include_str!("web/comment-list.html"),
@@ -44,14 +44,21 @@ impl Comment {
 			form = "this.parentElement.parentElement.nextElementSibling",
 			id = self.id,
 			time = time::at(self.post_time).ctime(),
+			captcha = if guest {
+				include_str!("web/captcha.html")
+			} else {
+				""
+			},
 			children = "",
 		)
 	}
 }
 
 impl CommentList for Vec<Comment> {
-	fn display(&self) -> String { self.display_from_root(-1) }
-	fn display_from_root(&self, root: i64) -> String {
+	fn display(&self, guest: bool) -> String {
+		self.display_from_root(-1, guest)
+	}
+	fn display_from_root(&self, root: i64, guest: bool) -> String {
 		let mut string = String::new();
 		// Return a new string to stop recursion if no children found
 		if self.len() == 0 {
@@ -68,7 +75,12 @@ impl CommentList for Vec<Comment> {
 				form = "this.parentElement.parentElement.nextElementSibling",
 				id = comment.id,
 				time = time::at(comment.post_time).ctime(),
-				children = self.display_from_root(comment.id as i64),
+				captcha = if guest {
+					include_str!("web/captcha.html")
+				} else {
+					""
+				},
+				children = self.display_from_root(comment.id as i64, guest),
 			));
 		}
 		string

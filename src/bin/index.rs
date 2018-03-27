@@ -8,8 +8,9 @@ use amandag::cgi;
 use amandag::mysql;
 
 const SELECT_COMMENT_COUNT: &'static str = "SELECT COUNT(*) AS comment_count \
-    FROM comments WHERE post_id = ?";
-const SELECT_ARTICLES: &'static str = "SELECT id, title, content, post_time, edit_time, category \
+                                            FROM comments WHERE post_id = ?";
+const SELECT_ARTICLES: &'static str =
+	"SELECT id, title, content, post_time, edit_time, category \
 	 FROM posts \
 	 ORDER BY post_time DESC \
 	 LIMIT 20";
@@ -51,12 +52,11 @@ fn run() -> Result<()> {
 					let (id, title, content, post_time, edit_time, category) =
 						mysql::from_row(row);
 					// Get amount of comments on post
-					let comment_count =
-						mysql::from_row(
-							pool.first_exec(SELECT_COMMENT_COUNT, (id,))
-								.unwrap()
-								.unwrap(),
-						);
+					let comment_count = mysql::from_row(
+						pool.first_exec(SELECT_COMMENT_COUNT, (id,))
+							.unwrap()
+							.unwrap(),
+					);
 					Article {
 						id,
 						title,

@@ -29,7 +29,10 @@ fn main() {
 		println!("{}\n", include_str!("../web/http-headers"));
 		println!(
 			include_str!("../web/index.html"),
-			content = format!("<article><h1>Error</h1>{}</article>", e.to_string()),
+			content = format!(
+				"<article><h1>Error</h1>{}</article>",
+				e.to_string()
+			),
 			head = "",
 			userinfo = "",
 			title = "Error"
@@ -42,7 +45,8 @@ fn run() -> Result<()> {
 	if cgi::request_method_is("POST") {
 		let post = cgi::get_post().ok_or(ErrorKind::Post)?;
 		let get = |key: &'static str| -> Result<&String> {
-			post.get(key).ok_or(ErrorKind::Undefined(key).into())
+			post.get(key)
+				.ok_or(ErrorKind::Undefined(key).into())
 		};
 		let user = get("user")?;
 		let pass = get("password")?;
@@ -63,7 +67,7 @@ fn run() -> Result<()> {
 			head = "",
 			userinfo = cgi::print_user_info(&user),
 			content = format!(
-				"<article><h1>Login successful</h1>Successfully logged in as {}",
+				"<article><h1>Login successful</h1>Successfully logged in as {}</article>",
 				user
 			)
 		);
