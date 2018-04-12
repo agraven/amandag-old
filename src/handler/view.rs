@@ -1,71 +1,62 @@
-extern crate amandag;
-#[macro_use]
-extern crate error_chain;
+use gotham::http::response::create_response;
+use gotham::state::{FromState, State};
 
-use amandag::Article;
-use amandag::Comment;
-use amandag::CommentList;
-use amandag::auth;
-use amandag::cgi;
-use amandag::mysql;
+use hyper::{Response, StatusCode};
+
+use mime;
+
+use article::Article;
+use auth;
+use cgi;
+use comment::{Comment, CommentList};
+use error::{self, Error, Result};
+use mysql;
+
+#[derive(Deserialize, StateData, StaticResponseExtender)]
+pub struct PathExtractor {
+	id: i32,
+}
 
 const SELECT_COMMENT_COUNT: &str = "SELECT COUNT(*) AS comment_count \
                                     FROM comments WHERE post_id = ?";
-const SELECT_POST: &'static str =
-	"SELECT id, title, content, post_time, edit_time, category, visible \
+const SELECT_ARTICLE: &'static str =
+	"SELECT id, title, content, post_time, edit_time, category \
 	 FROM posts WHERE id = ?";
 
-error_chain! {
-	foreign_links {
-		SqlConversion(mysql::FromRowError);
-		Sql(mysql::Error);
-		ParseInt(std::num::ParseIntError);
-	}
-	links {
-		Auth(auth::Error, auth::ErrorKind);
-		Cgi(cgi::Error, cgi::ErrorKind);
-	}
-	errors {
-		InvalidId(id: u64) {
-			description("invalid article id"),
-			display("Invalid article id: {}", id),
+pub fn handle(state: State) -> (State, Response) {
+	match run(&state) {
+		Ok(content) => {
+			let response = create_response(
+				&state,
+				StatusCode::Ok,
+				Some((content, mime::TEXT_HTML)),
+			);
+			(state, response)
 		}
-		MissingParam(s: &'static str) {
-			description("missing POST parameter"),
-			display("Missing POST value: {}", s),
+		Err(e) => {
+			let content = error::print(e).into_bytes();
+			let response = create_response(
+				&state,
+				StatusCode::InternalServerError,
+				Some((content, mime::TEXT_HTML)),
+			);
+			(state, response)
 		}
 	}
 }
 
-fn main() {
-	if let Err(e) = run() {
-		println!("{}\n", include_str!("../web/http-headers"));
-		println!(
-			include_str!("../web/index.html"),
-			title = "Internal server error",
-			head = "",
-			userinfo = cgi::print_user_info("guest"),
-			content = e.to_string()
-		);
-	}
-}
-
-fn run() -> Result<()> {
-	// Get map of GET request and get id
-	let id: i64 = cgi::get_get_member("id")
-		.ok_or(ErrorKind::MissingParam("id"))?
-		.parse()?;
-
+fn run(state: &State) -> Result<Vec<u8>> {
+	let id = PathExtractor::borrow_from(&state).id;
 	// Establish connection to MySQL server
 	let pool =
 		mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")?;
-	let session = auth::get_session()?;
+	let session = auth::get_session(&state)?;
 	// Get article from database
 	let article = {
-		let row = pool.first_exec(SELECT_POST, (id,))?
-			.ok_or(ErrorKind::InvalidId(id as u64))?;
+		let row = pool.first_exec(SELECT_ARTICLE, (id,))?
+			.ok_or(Error::InvalidId(id as u64))?;
 		// Bind values from row
-		let (id, title, content, post_time, edit_time, category, visible) =
+		let (id, title, content, post_time, edit_time, category) =
 			mysql::from_row(row);
 		// Get amount of comments
 		let comment_count = mysql::from_row(
@@ -80,7 +71,6 @@ fn run() -> Result<()> {
 			edit_time,
 			category,
 			comment_count,
-			visible,
 		}
 	};
 
@@ -106,9 +96,7 @@ fn run() -> Result<()> {
 			.collect()
 	})?;
 
-	// print document
-	println!("{}\n", include_str!("../web/http-headers"));
-	println!(
+	let content = format!(
 		include_str!("../web/index.html"),
 		title = article.title,
 		head = format!(
@@ -127,6 +115,6 @@ fn run() -> Result<()> {
 			include_str!("../web/comment-form.html"),
 			comments.display(session.user == "guest")
 		),
-	);
-	Ok(())
+	).into_bytes();
+	Ok(content)
 }

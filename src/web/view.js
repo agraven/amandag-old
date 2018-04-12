@@ -38,14 +38,14 @@ function send(form) {
 	}
 
 	var request = new XMLHttpRequest();
-	request.open("POST", "/comment.cgi", true);
+	request.open("POST", "/comment", true);
 	request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 	request.onreadystatechange = function() {
 		if (this.readyState == 4) {
 			if (this.status == 200) {
 				form.parentElement.innerHTML += this.responseText;
 			} else {
-				alert("Error " + this.status + ": " + this.statusText);
+				alert("Error " + this.status + ": " + this.statusText + ": " + this.responseText);
 			}
 		}
 	}
