@@ -12,7 +12,6 @@ pub struct Article {
 	pub post_time: Timespec,
 	pub edit_time: Timespec,
 	pub category: String,
-	pub visible: bool,
 	pub comment_count: i64,
 }
 

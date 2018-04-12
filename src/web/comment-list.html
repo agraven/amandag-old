@@ -4,7 +4,7 @@
 	<ul class="comment-buttons">
 		<li><a href="javascript:void(0)" onclick="show({form})">reply</a></li>
 	</ul>
-	<form id="reply-{id}" class="comment" style="display: none;" method="post" action="/comment.cgi" onsubmit="send(this); return false;">
+	<form id="reply-{id}" class="comment" style="display: none;" method="post" action="/comment" onsubmit="send(this); return false;">
 		<input name="parent" value="{id}" style="display: none;">
 		<input type="text" name="name" placeholder="Name" required>
 		<p>

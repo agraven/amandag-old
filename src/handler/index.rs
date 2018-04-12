@@ -1,11 +1,14 @@
-extern crate amandag;
-#[macro_use]
-extern crate error_chain;
+use Article;
+use auth;
+use cgi;
+use error::{self, Result};
+use mime;
+use mysql;
 
-use amandag::Article;
-use amandag::auth;
-use amandag::cgi;
-use amandag::mysql;
+use gotham::http::response::create_response;
+use gotham::state::State;
+
+use hyper::{Response, StatusCode};
 
 const SELECT_COMMENT_COUNT: &'static str = "SELECT COUNT(*) AS comment_count \
                                             FROM comments WHERE post_id = ?";
@@ -15,33 +18,32 @@ const SELECT_ARTICLES: &'static str =
 	 ORDER BY post_time DESC \
 	 LIMIT 20";
 
-error_chain! {
-	foreign_links {
-		Sql(mysql::Error);
-	}
-	links {
-		Auth(auth::Error, auth::ErrorKind);
-		Cgi(cgi::Error, cgi::ErrorKind);
+pub fn handle(state: State) -> (State, Response) {
+	match run(&state) {
+		Ok(content) => {
+			let response = create_response(
+				&state,
+				StatusCode::Ok,
+				Some((content, mime::TEXT_HTML)),
+			);
+			(state, response)
+		}
+		Err(e) => {
+			let content = error::print(e).into_bytes();
+			let response = create_response(
+				&state,
+				StatusCode::InternalServerError,
+				Some((content, mime::TEXT_HTML)),
+			);
+			(state, response)
+		}
 	}
 }
 
-fn main() {
-	if let Err(e) = run() {
-		println!("{}\n", include_str!("../web/http-headers"));
-		println!(
-			include_str!("../web/index.html"),
-			title = "Amanda's homepage: Error",
-			head = "",
-			content = e.to_string(),
-			userinfo = "",
-		);
-	}
-}
-
-fn run() -> Result<()> {
+fn run(state: &State) -> Result<Vec<u8>> {
 	let pool =
 		mysql::Pool::new("mysql://readonly:1234@localhost:3306/amandag")?;
-	let session = auth::get_session()?;
+	let session = auth::get_session(&state)?;
 	// Select posts from SQL DATABASE
 	let selected: Vec<Article> = pool.prep_exec(SELECT_ARTICLES, ())
 		.map(|result| {
@@ -76,13 +78,12 @@ fn run() -> Result<()> {
 	for post in selected {
 		articles.push_str(&post.display());
 	}
-	println!("{}\n", include_str!("../web/http-headers"));
-	println!(
+	let content = format!(
 		include_str!("../web/index.html"),
 		userinfo = cgi::print_user_info(&session.user),
 		title = "Amanda Graven's homepage",
 		head = "",
 		content = articles,
-	);
-	Ok(())
+	).into_bytes();
+	Ok(content)
 }

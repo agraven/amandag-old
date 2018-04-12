@@ -1,6 +1,9 @@
 use crypto::bcrypt::bcrypt;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
+use gotham::state::FromState;
+use gotham::state::State;
+use hyper::header::{Cookie, Headers};
 use mysql;
 use rand::{self, Rng};
 use std::fs::File;
@@ -8,7 +11,7 @@ use std::io::Read;
 use time;
 use time::{Duration, Timespec};
 
-use cgi;
+use error::{Error, Result};
 
 const SALT_LENGTH: usize = 16;
 const SESSID_LENGTH: usize = 64;
@@ -23,44 +26,7 @@ const SELECT_SESSION: &'static str =
 	"SELECT id, user, expiry FROM sessions WHERE id = ?";
 const SELECT_USER: &'static str = "SELECT pass, salt FROM users WHERE id = ?";
 
-error_chain! {
-	foreign_links {
-		Sql(mysql::Error);
-		Utf8(::std::string::FromUtf8Error);
-		Io(::std::io::Error);
-	}
-	links {
-		Cgi(cgi::Error, cgi::ErrorKind);
-	}
-	errors {
-		ExpiredToken {
-			description("token has expired"),
-			display("Token has expired"),
-		}
-		InvalidToken {
-			description("token is invalid"),
-			display("Invalid login token"),
-		}
-		NoSuchToken {
-			description("no such token"),
-			display("Attemped to login with nonexistant token"),
-		}
-		NoSuchUser(s: String) {
-			description("no such user"),
-			display("The user {} doesn't exist", s),
-		}
-		WrongPassword {
-			description("wrong password"),
-			display("Wrong password"),
-		}
-	}
-}
-
-pub struct User {
-	pub id: String,
-	pub pass: String,
-}
-
+#[derive(Clone)]
 pub struct Session {
 	pub id: String,
 	pub user: String,
@@ -96,7 +62,7 @@ pub fn auth(sessid: &str) -> Result<Session> {
 			mysql::from_row(row);
 		if expiry < time::get_time() {
 			pool.first_exec(DELETE_SESSION, (sessid,))?;
-			Err(ErrorKind::ExpiredToken.into())
+			Err(Error::ExpiredToken)
 		} else {
 			return Ok(Session {
 				id: id.to_owned(),
@@ -105,7 +71,7 @@ pub fn auth(sessid: &str) -> Result<Session> {
 			});
 		}
 	} else {
-		Err(ErrorKind::NoSuchToken.into())
+		Err(Error::NoSuchToken)
 	}
 }
 
@@ -134,10 +100,10 @@ pub fn login(user: &str, password: &str) -> Result<Session> {
 				expiry,
 			})
 		} else {
-			Err(ErrorKind::WrongPassword.into())
+			Err(Error::WrongPassword)
 		}
 	} else {
-		Err(ErrorKind::NoSuchUser(user.to_owned()).into())
+		Err(Error::NoSuchUser)
 	}
 }
 
@@ -175,15 +141,15 @@ pub fn create(user: &str, password: &str, name: &str) -> Result<()> {
 	Ok(())
 }
 
-pub fn get_session() -> Result<Session> {
-	let cookies = cgi::get_cookies()?;
-	if let Some(id) = cookies.get("session") {
-		auth(&id)
-	} else {
-		Ok(Session {
-			id: String::new(),
-			user: String::from("guest"),
-			expiry: time::get_time(),
-		})
+pub fn get_session(state: &State) -> Result<Session> {
+	if let Some(cookies) = Headers::borrow_from(state).get::<Cookie>() {
+		if let Some(id) = cookies.get("token") {
+			return auth(&id);
+		}
 	}
+	Ok(Session {
+		id: String::new(),
+		user: String::from("guest"),
+		expiry: time::get_time(),
+	})
 }
