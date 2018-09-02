@@ -1,4 +1,4 @@
-body {
+html, body {
 	background: #567;
 	color: white;
 }
@@ -123,6 +123,9 @@ footer {
 	font-size: 80%;
 	font-style: italic;
 	font-family: sans;
+}
+footer a {
+	padding-right: 1em;
 }
 footer.notice {
 	background: #345;

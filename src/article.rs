@@ -4,7 +4,6 @@ use cgi::Encode;
 
 use self::time::Timespec;
 
-// TODO: rename to Article?
 pub struct Article {
 	pub id: u64,
 	pub title: String,

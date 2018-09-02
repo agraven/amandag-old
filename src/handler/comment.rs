@@ -8,8 +8,6 @@ use hyper::{Body, Response, StatusCode};
 
 use mime;
 
-use mysql;
-
 use std::fs::File;
 use std::io::Read;
 
@@ -17,19 +15,10 @@ use auth;
 use captcha;
 use cgi;
 use comment::Comment;
+use db;
 use error::{Error, Result};
 use time;
 
-const SELECT_UNUSED: &str = r#"SELECT min(unused) AS unused
-    FROM (
-        SELECT MIN(t1.id)+1 as unused
-        FROM comments AS t1
-        WHERE NOT EXISTS (SELECT * FROM comments AS t2 WHERE t2.id = t1.id+1)
-        UNION
-        SELECT 1
-        FROM DUAL
-        WHERE NOT EXISTS (SELECT * FROM comments WHERE id = 1)
-    ) AS subquery"#;
 
 pub fn handle(mut state: State) -> Box<HandlerFuture> {
 	let f = Body::take_from(&mut state)
@@ -77,33 +66,14 @@ fn run(state: &State, post: Vec<u8>) -> Result<Response> {
 	let post_id = get("id")?.parse::<i64>()?;
 	let parent_id = get("parent")?.parse::<i64>()?;
 
-	let password = String::from_utf8(
-		File::open("secret/db-submit")?
-			.bytes()
-			.map(|b| b.unwrap())
-			.collect(),
+	let id = db::insert_comment(
+        &session.user,
+        &author,
+        &content,
+        post_id,
+        parent_id,
 	)?;
 
-	let options = format!(
-		"mysql://submit:{}@localhost:3306/amandag",
-		password
-	);
-	let pool = mysql::Pool::new(options)?;
-
-	// Get a unique id
-	let id: u64 = mysql::from_row(pool.first_exec(SELECT_UNUSED, ())?.unwrap());
-	pool.prep_exec(
-		"INSERT INTO comments (id, user, author, content, post_id, parent_id) \
-		 VALUES (?, ?, ?, ?, ?, ?)",
-		(
-			id,
-			&session.user,
-			&author,
-			&content,
-			post_id,
-			parent_id,
-		),
-	)?;
 	let post_time = time::get_time();
 
 	let content = format!(

@@ -7,6 +7,8 @@ extern crate gotham_derive;
 extern crate hoedown;
 extern crate hyper;
 extern crate hyper_tls;
+#[macro_use]
+extern crate lazy_static;
 extern crate mime;
 extern crate mysql;
 extern crate native_tls;
@@ -26,6 +28,7 @@ mod auth;
 mod captcha;
 mod cgi;
 mod comment;
+mod db;
 mod error;
 mod handler;
 
