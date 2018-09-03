@@ -1,7 +1,7 @@
 use mysql;
 use mysql::Pool;
 
-use time;
+use time::Timespec;
 
 use std::fs::File;
 use std::io::Read;
@@ -49,33 +49,32 @@ pub fn select_article(id: u64) -> Result<Article> {
 }
 
 pub fn select_articles() -> Result<Vec<Article>> {
-    const SELECT_ARTICLES: &str =
-        "SELECT id, title, content, post_time, edit_time, category \
-	 FROM posts \
-	 ORDER BY post_time DESC";
-    let pool = POOL.lock().unwrap();
-    let articles = pool
-        .prep_exec(SELECT_ARTICLES, ())
-        .map(|result| {
-            result
-                .map(|x| x.unwrap())
-                .map(|row| {
-                    let (id, title, content, post_time, edit_time, category) =
-                        mysql::from_row(row);
-                    let comment_count = select_comment_count(&pool, id).unwrap() as i64;
-                    Article {
-                        id,
-                        title,
-                        content,
-                        post_time,
-                        edit_time,
-                        category,
-                        comment_count,
-                    }
-                })
-                .collect()
-        })?;
-    Ok(articles)
+	const SELECT_ARTICLES: &str =
+		"SELECT id, title, content, post_time, edit_time, category \
+		 FROM posts \
+		 ORDER BY post_time DESC";
+	let pool = POOL.lock().unwrap();
+	let articles = pool.prep_exec(SELECT_ARTICLES, ()).map(|result| {
+		result
+			.map(|x| x.unwrap())
+			.map(|row| {
+				let (id, title, content, post_time, edit_time, category) =
+					mysql::from_row(row);
+				let comment_count =
+					select_comment_count(&pool, id).unwrap() as i64;
+				Article {
+					id,
+					title,
+					content,
+					post_time,
+					edit_time,
+					category,
+					comment_count,
+				}
+			})
+			.collect()
+	})?;
+	Ok(articles)
 }
 
 pub fn select_comment_count(pool: &Pool, id: u64) -> Result<u64> {
@@ -107,27 +106,51 @@ pub fn select_comments(article_id: u64) -> Result<Vec<Comment>> {
 					}
 				})
 				.collect()
-		}
+		},
 	)?;
 	Ok(comments)
 }
 
-pub fn insert_article(title: &str, content: &str, category: &str) -> Result<()> {
-    let pool = POOL.lock().unwrap();
-    const INSERT_ARTICLE: &str =
-        "INSERT INTO posts (title, content, category) VALUES (?, ?, ?)";
-    pool.prep_exec(INSERT_ARTICLE, (title, content, category))?;
-    Ok(())
+pub fn select_session(id: &str) -> Result<Option<(String, String, Timespec)>> {
+	const SELECT_SESSION: &str =
+		"SELECT id, user, expiry FROM sessions WHERE id = ?";
+	let pool = POOL.lock().unwrap();
+	match pool.first_exec(SELECT_SESSION, (id,))? {
+		Some(row) => Ok(Some(mysql::from_row(row))),
+		None => Ok(None),
+	}
+}
+
+pub fn select_user(user: &str) -> Result<Option<(String, String)>> {
+	const SELECT_USER: &'static str =
+		"SELECT pass, salt FROM users WHERE id = ?";
+	let pool = POOL.lock().unwrap();
+	match pool.first_exec(SELECT_USER, (user,))? {
+		Some(row) => Ok(Some(mysql::from_row(row))),
+		None => Ok(None),
+	}
+}
+
+pub fn insert_article(
+	title: &str,
+	content: &str,
+	category: &str,
+) -> Result<()> {
+	let pool = POOL.lock().unwrap();
+	const INSERT_ARTICLE: &str =
+		"INSERT INTO posts (title, content, category) VALUES (?, ?, ?)";
+	pool.prep_exec(INSERT_ARTICLE, (title, content, category))?;
+	Ok(())
 }
 
 pub fn insert_comment(
-    user: &str,
-    author: &str,
-    content: &str,
-    post_id: i64,
-    parent_id: i64
+	user: &str,
+	author: &str,
+	content: &str,
+	post_id: i64,
+	parent_id: i64,
 ) -> Result<u64> {
-    const SELECT_UNUSED: &str = r#"SELECT min(unused) AS unused
+	const SELECT_UNUSED: &str = r#"SELECT min(unused) AS unused
         FROM (
             SELECT MIN(t1.id)+1 as unused
             FROM comments AS t1
@@ -137,34 +160,59 @@ pub fn insert_comment(
             FROM DUAL
             WHERE NOT EXISTS (SELECT * FROM comments WHERE id = 1)
         ) AS subquery"#;
-    const INSERT_COMMENT: &str =
-        "INSERT INTO comments (id, user, author, content, post_id, parent_id) \
+	const INSERT_COMMENT: &str =
+		"INSERT INTO comments (id, user, author, content, post_id, parent_id) \
 		 VALUES (?, ?, ?, ?, ?, ?)";
 
-    let pool = POOL.lock().unwrap();
+	let pool = POOL.lock().unwrap();
 	let id: u64 = mysql::from_row(pool.first_exec(SELECT_UNUSED, ())?.unwrap());
 
-    pool.prep_exec(
-        INSERT_COMMENT,
-        (id, user, author, content, post_id, parent_id),
-    )?;
-    Ok(id)
+	pool.prep_exec(
+		INSERT_COMMENT,
+		(id, user, author, content, post_id, parent_id),
+	)?;
+	Ok(id)
+}
+
+pub fn insert_session(
+	id: &str,
+	user: &str,
+	expiry: Timespec,
+) -> Result<()> {
+	const INSERT_SESSION: &'static str =
+		"INSERT INTO sessions (id, user, expiry) VALUES (?, ?, ?)";
+	let pool = POOL.lock().unwrap();
+	pool.prep_exec(INSERT_SESSION, (id, user, expiry))?;
+	Ok(())
+}
+
+pub fn insert_user(user: &str, hash: &str, salt: &str, name: &str) -> Result<()> {
+    const INSERT_USER: &str =
+        "INSERT INTO users (id, pass, salt, name) VALUES (?, ?, ?, ?)";
+    let pool = POOL.lock().unwrap();
+    pool.prep_exec(INSERT_USER, (user, hash, salt, name))?;
+    Ok(())
 }
 
 pub fn update_article(
-    title: &str,
-    content: &str,
-    category: &str,
-    time: time::Timespec,
-    id: u64
+	title: &str,
+	content: &str,
+	category: &str,
+	time: Timespec,
+	id: u64,
 ) -> Result<()> {
-    const UPDATE_ARTICLE: &str =
-        "UPDATE posts \
-        SET title = ?, content = ?, category = ?, edit_time = ? \
-        WHERE id = ?";
-    let pool = POOL.lock().unwrap();
-    pool.prep_exec(
-        UPDATE_ARTICLE, (title, content, category, time, id)
-    )?;
-    Ok(())
+	const UPDATE_ARTICLE: &str =
+		"UPDATE posts \
+		 SET title = ?, content = ?, category = ?, edit_time = ? \
+		 WHERE id = ?";
+	let pool = POOL.lock().unwrap();
+	pool.prep_exec(UPDATE_ARTICLE, (title, content, category, time, id))?;
+	Ok(())
+}
+
+pub fn delete_session(id: &str) -> Result<()> {
+	const DELETE_SESSION: &str = "DELETE FROM sessions WHERE id = ?";
+	let pool = POOL.lock().unwrap();
+	pool.prep_exec(DELETE_SESSION, (id,))?;
+	Ok(())
 }
