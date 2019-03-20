@@ -1,3 +1,5 @@
+<p align="center"><img src="logo/horizontal.png" alt="amandag" height="200px"></p>
+
 # amandag.net
 This is the source code for my [personal blog and homepage](https://amandag.net), The site is written in Rust, and is intended to be used as CGI pages in Apache or a similar server.
 
